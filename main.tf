@@ -94,11 +94,11 @@ resource "terraform_data" "environment_policy_guard" {
 data "digitalocean_project" "grayhaven" {
   count = local.is_environment ? 1 : 0
 
-  name = local.client_name
+  name = local.infrastructure_policy.project.name
 }
 
 data "external" "vault_config" {
-  count = local.is_environment ? 1 : 0
+  count = 1
 
   program = [
     "${path.module}/scripts/read-vault-config",
@@ -111,9 +111,9 @@ resource "digitalocean_vpc" "baseline" {
   count = local.is_baseline ? 1 : 0
 
   name        = "${local.client_name}-core-baseline-vpc"
-  region      = var.default_region
-  ip_range    = var.baseline_vpc_cidr
-  description = "Baseline default VPC for Grayhaven Systems LLC"
+  region      = local.default_region
+  ip_range    = local.baseline_vpc_cidr
+  description = "Baseline default VPC for ${local.organization}"
 
   lifecycle {
     prevent_destroy = true
@@ -125,9 +125,9 @@ module "vpc" {
   source = "./modules/vpc"
 
   name        = "${local.client_name}-core-${local.environment}-vpc"
-  region      = var.default_region
+  region      = local.default_region
   vpc_cidr    = local.environment_vpc_cidr
-  description = "${title(local.environment)} VPC for Grayhaven Systems LLC"
+  description = "${title(local.environment)} VPC for ${local.organization}"
 }
 
 module "bastion" {
@@ -135,7 +135,7 @@ module "bastion" {
   source   = "./modules/droplet"
 
   name                 = each.value.hostname
-  region               = var.default_region
+  region               = local.default_region
   vpc_id               = module.vpc[0].id
   ssh_key_fingerprints = local.admin_ssh_key_fingerprints
   size                 = each.value.size
@@ -149,7 +149,7 @@ module "web" {
   source   = "./modules/droplet"
 
   name                 = each.value.hostname
-  region               = var.default_region
+  region               = local.default_region
   vpc_id               = module.vpc[0].id
   ssh_key_fingerprints = local.admin_ssh_key_fingerprints
   size                 = each.value.size
@@ -163,7 +163,7 @@ module "mcp" {
   source   = "./modules/droplet"
 
   name                 = each.value.hostname
-  region               = var.default_region
+  region               = local.default_region
   vpc_id               = module.vpc[0].id
   ssh_key_fingerprints = local.admin_ssh_key_fingerprints
   size                 = each.value.size

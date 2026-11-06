@@ -1,6 +1,9 @@
 locals {
-  ssh_keys_policy_path      = coalesce(var.grayhaven_test_ssh_keys_policy_path, "${path.module}/policy/baseline/ssh-keys.yml")
-  ssh_keys_policy           = yamldecode(file(local.ssh_keys_policy_path))
+  ssh_keys_policy = yamldecode(
+    var.grayhaven_test_ssh_keys_policy_path != null
+    ? file(var.grayhaven_test_ssh_keys_policy_path)
+    : data.external.vault_config[0].result.ssh_keys_yml
+  )
   admin_ssh_key_public_keys = toset(try(local.ssh_keys_policy.admin_ssh_keys, []))
 
   admin_ssh_key_parts = {

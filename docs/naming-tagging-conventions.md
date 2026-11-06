@@ -13,13 +13,13 @@ so resources are easy to audit, filter, and operate during routine changes.
 Resource names use stable, descriptive segments:
 
 ```text
-grayhaven-<project>-<environment>-<role-or-service>
+<client>-<project>-<environment>-<role-or-service>
 ```
 
 Indexed resources add a two-digit instance number:
 
 ```text
-grayhaven-<project>-<environment>-<role>-NN
+<client>-<project>-<environment>-<role>-NN
 ```
 
 Current project segments are:
@@ -30,12 +30,12 @@ Current project segments are:
 
 Examples:
 
-- `grayhaven-core-baseline-vpc`
-- `grayhaven-core-prod-vpc`
-- `grayhaven-core-prod-web-01`
-- `grayhaven-sec-prod-bastion-01`
-- `grayhaven-core-prod-web-fw`
-- `grayhaven-core-prod-web-lb`
+- `example-core-baseline-vpc`
+- `example-core-prod-vpc`
+- `example-core-prod-web-01`
+- `example-sec-prod-bastion-01`
+- `example-core-prod-web-fw`
+- `example-core-prod-web-lb`
 
 [Back to top](#infrastructure-naming--tagging-conventions)
 

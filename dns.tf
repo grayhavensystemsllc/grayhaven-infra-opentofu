@@ -1,7 +1,10 @@
 locals {
-  dns_policy_path = coalesce(var.grayhaven_test_dns_policy_path, "${local.policy_directory}/dns.yml")
-  dns_policy      = yamldecode(file(local.dns_policy_path))
-  dns_ttl         = try(local.dns_policy.ttl, 300)
+  dns_policy = yamldecode(
+    var.grayhaven_test_dns_policy_path != null
+    ? file(var.grayhaven_test_dns_policy_path)
+    : (local.is_baseline ? data.external.vault_config[0].result.baseline_dns_yml : data.external.vault_config[0].result.dns_yml)
+  )
+  dns_ttl = try(local.dns_policy.ttl, 300)
 
   dns_supported_baseline_protected_record_types    = toset(["A", "CNAME", "MX", "TXT", "CAA"])
   dns_supported_environment_protected_record_types = toset(["A", "CNAME", "TXT"])

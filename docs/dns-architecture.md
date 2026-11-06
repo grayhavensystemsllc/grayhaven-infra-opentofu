@@ -3,9 +3,8 @@
 This document summarizes how this repository manages DNS behavior. DNS policy
 file formats are documented in [Policy Files](policy.md).
 
-Environment droplets receive FQDNs automatically. Production droplet hostnames
-are suffixed by `grayhavensystems.com`; staging droplet hostnames are suffixed
-by `staging.grayhavensystems.com`.
+Environment droplets receive FQDNs from `identity.client_domain` in
+`infrastructure.yml`. Staging adds the `staging.` prefix.
 
 DigitalOcean creates PTR records for droplets from their configured hostnames.
 

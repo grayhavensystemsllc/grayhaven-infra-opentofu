@@ -40,6 +40,9 @@ jobs:
       - name: Check OpenTofu formatting
         run: tofu fmt -check -recursive
 
+      - name: Test vault configuration reader
+        run: python3 tests/test_read_vault_config.py
+
       - name: Initialize OpenTofu
         run: tofu init -backend=false
 

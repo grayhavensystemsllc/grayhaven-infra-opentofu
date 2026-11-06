@@ -1,0 +1,24 @@
+---
+identity:
+  client_name: example
+  client_domain: example.com
+  organization: Example Company
+
+project:
+  name: example
+  description: Example infrastructure project
+  purpose: Web Application
+  environment: Production
+  is_default: true
+
+defaults:
+  region: nyc1
+  os_image: almalinux-10-x64
+  droplet_size: s-1vcpu-2gb
+
+baseline:
+  vpc_cidr: 172.20.0.0/16
+
+repositories:
+  config: https://github.com/example-org/configuration.git
+  vault: git@github.com:example-org/private-vault.git
