@@ -32,7 +32,7 @@ depend on, including:
 - CAA records;
 - the default baseline VPC.
 
-The default baseline VPC is named `grayhaven-core-baseline-vpc` and is not
+The default baseline VPC follows `<client>-core-baseline-vpc` and is not
 used. Resources should not be assigned to this VPC. It exists because
 DigitalOcean does not allow default VPCs to be destroyed and to act as a safety
 net in case a resource is created on accident without explicit VPC assignment.
@@ -59,10 +59,9 @@ Staging owns environment-specific resources such as:
 - staging droplet DNS records;
 - staging load balancers when the compute policy requires them.
 
-Staging reads `config.yml` and `firewall.yml` from the `staging` Git ref in the
-local `grayhaven-vault`
-checkout. The vault checkout does not need to have `staging` checked out, but
-the ref must be present locally.
+Staging reads plaintext configuration from the `staging` Git ref in the local
+`grayhaven-vault` checkout. The checkout can use another branch, but the
+`staging` ref must be present locally.
 
 The `staging` workspace is expected to be destroyed after validation unless an
 active test requires it to remain online.
@@ -82,9 +81,8 @@ Production owns environment-specific resources such as:
 - production droplet DNS records;
 - production load balancers when the compute policy requires them.
 
-Production reads `config.yml` and `firewall.yml` from the `main` Git ref in the
-local `grayhaven-vault`
-checkout. The vault checkout does not need to have `main` checked out, but the
+Production reads plaintext configuration from the `main` Git ref in the local
+`grayhaven-vault` checkout. The checkout can use another branch, but the `main`
 ref must be present locally.
 
 Changes to the `prod` workspace should follow Grayhaven Systems LLC change

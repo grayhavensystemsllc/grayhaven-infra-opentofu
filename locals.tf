@@ -3,9 +3,9 @@ locals {
   # Repository and workspace identity
   #############################################################################
 
-  client_name            = "grayhaven"
-  client_domain          = "grayhavensystems.com"
-  personal_domain        = "jerry-smith.net"
+  client_name            = local.infrastructure_policy.identity.client_name
+  client_domain          = local.infrastructure_policy.identity.client_domain
+  organization           = local.infrastructure_policy.identity.organization
   supported_workspaces   = ["baseline", "staging", "prod"]
   environment_workspaces = ["staging", "prod"]
   environment            = terraform.workspace
@@ -14,7 +14,7 @@ locals {
   is_prod                = local.environment == "prod"
 
   config_repo_ref = local.is_prod && !var.allow_prod_config_repo_ref_override ? "main" : var.grayhaven_config_repo_ref
-  vault_repo_ref  = local.is_prod ? "main" : "staging"
+  vault_repo_ref  = local.environment == "staging" ? "staging" : "main"
 
   state_encryption_passphrase = (
     local.environment == "baseline" ? var.state_encryption_passphrase_baseline :
@@ -34,11 +34,9 @@ locals {
   )
 
   #############################################################################
-  # Shared selectors and committed policy
+  # Shared selectors and vault policy
   #############################################################################
 
-  policy_workspace = contains(local.supported_workspaces, local.environment) ? local.environment : "baseline"
-  policy_directory = "${path.module}/policy/${local.policy_workspace}"
   common_tags = [
     "client-${local.client_name}",
     "env-${local.environment}",
@@ -47,14 +45,28 @@ locals {
     "tls-mode-${replace(local.effective_tls_mode, "_", "-")}"
   ]
 
-  compute_policy_path = coalesce(var.grayhaven_test_compute_policy_path, "${local.policy_directory}/compute.yml")
-
-  compute_policy = local.is_environment ? yamldecode(file(local.compute_policy_path)) : null
+  compute_policy = local.is_environment ? yamldecode(
+    var.grayhaven_test_compute_policy_path != null
+    ? file(var.grayhaven_test_compute_policy_path)
+    : data.external.vault_config[0].result.compute_yml
+  ) : null
 
   vault_checkout_path = coalesce(
     var.grayhaven_vault_checkout_path,
     abspath("${path.module}/../grayhaven-vault"),
   )
+
+  infrastructure_policy = yamldecode(
+    var.grayhaven_test_infrastructure_policy_path != null
+    ? file(var.grayhaven_test_infrastructure_policy_path)
+    : data.external.vault_config[0].result.infrastructure_yml
+  )
+  default_region       = local.infrastructure_policy.defaults.region
+  default_os_image     = local.infrastructure_policy.defaults.os_image
+  default_droplet_size = local.infrastructure_policy.defaults.droplet_size
+  baseline_vpc_cidr    = local.infrastructure_policy.baseline.vpc_cidr
+  config_repo_url      = local.infrastructure_policy.repositories.config
+  vault_repo_url       = local.infrastructure_policy.repositories.vault
 
   # Environment workspaces read config.yml from the intended vault Git ref, not
   # from whichever branch is checked out in the local vault working tree.
@@ -164,8 +176,8 @@ locals {
       index           = instance.index
       hostname        = format("%s-sec-%s-bastion-%02d.%s", local.client_name, local.environment, instance.index, local.environment_hostname_suffix)
       is_control_node = key == local.control_bastion_key
-      size            = try(instance.size, var.default_droplet_size)
-      image           = try(instance.image, var.default_os_image)
+      size            = try(instance.size, local.default_droplet_size)
+      image           = try(instance.image, local.default_os_image)
       tags = concat(local.environment_host_common_tags, [
         "project-sec",
         "role-bastion",
@@ -180,8 +192,8 @@ locals {
     for key, instance in local.web_instances : key => {
       index    = instance.index
       hostname = format("%s-core-%s-web-%02d.%s", local.client_name, local.environment, instance.index, local.environment_hostname_suffix)
-      size     = try(instance.size, var.default_droplet_size)
-      image    = try(instance.image, var.default_os_image)
+      size     = try(instance.size, local.default_droplet_size)
+      image    = try(instance.image, local.default_os_image)
       tags = concat(local.environment_host_common_tags, [
         "project-core",
         "role-web",
@@ -195,8 +207,8 @@ locals {
     for key, instance in local.mcp_instances : key => {
       index    = instance.index
       hostname = format("%s-core-%s-mcp-%02d.%s", local.client_name, local.environment, instance.index, local.environment_hostname_suffix)
-      size     = try(instance.size, var.default_droplet_size)
-      image    = try(instance.image, var.default_os_image)
+      size     = try(instance.size, local.default_droplet_size)
+      image    = try(instance.image, local.default_os_image)
       tags = concat([for tag in local.environment_host_common_tags : tag if !startswith(tag, "tls-mode-")], [
         "tls-mode-host",
         "project-core",
@@ -215,7 +227,7 @@ locals {
       grayhaven_is_control_node            = host.is_control_node
       grayhaven_control_bastion_key        = local.control_bastion_key
       grayhaven_config_repo_ref            = local.config_repo_ref
-      grayhaven_vault_repo_url             = var.grayhaven_vault_repo_url
+      grayhaven_vault_repo_url             = local.vault_repo_url
       grayhaven_vault_repo_ref             = local.vault_repo_ref
       grayhaven_vault_password             = local.vault_password
       grayhaven_ansible_deploy_public_key  = var.grayhaven_ansible_deploy_public_key
@@ -255,6 +267,7 @@ locals {
     for key, bootstrap_vars in local.bastion_bootstrap_vars : key => templatefile("${path.module}/templates/cloud-init/bootstrap-vars.yml.tftpl", {
       bootstrap_vars_yaml = yamlencode(bootstrap_vars)
       config_repo_ref     = local.config_repo_ref
+      config_repo_url     = local.config_repo_url
     })
   }
 
@@ -262,6 +275,7 @@ locals {
     for key, bootstrap_vars in local.web_bootstrap_vars : key => templatefile("${path.module}/templates/cloud-init/bootstrap-vars.yml.tftpl", {
       bootstrap_vars_yaml = yamlencode(bootstrap_vars)
       config_repo_ref     = local.config_repo_ref
+      config_repo_url     = local.config_repo_url
     })
   }
 
@@ -269,6 +283,7 @@ locals {
     for key, bootstrap_vars in local.mcp_bootstrap_vars : key => templatefile("${path.module}/templates/cloud-init/bootstrap-vars.yml.tftpl", {
       bootstrap_vars_yaml = yamlencode(bootstrap_vars)
       config_repo_ref     = local.config_repo_ref
+      config_repo_url     = local.config_repo_url
     })
   }
 

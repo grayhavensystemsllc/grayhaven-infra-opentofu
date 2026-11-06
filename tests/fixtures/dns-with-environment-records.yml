@@ -2,8 +2,8 @@
 ttl: 300
 
 domains:
-  grayhaven_systems:
-    name: grayhavensystems.com
+  primary_site:
+    name: example.com
     environment:
       apex: true
       web_aliases: true
@@ -15,11 +15,11 @@ domains:
       infrastructure_notice_cname:
         type: CNAME
         name: notice
-        value: infra.grayhavensystems.com.
+        value: infra.example.com.
       infrastructure_notice_txt:
         type: TXT
         name: _infrastructure
-        value: "Grayhaven Systems LLC infrastructure-managed DNS"
+        value: "Example infrastructure DNS"
     protected_records:
       protected_a:
         type: A
@@ -28,14 +28,14 @@ domains:
       protected_cname:
         type: CNAME
         name: protected-notice
-        value: protected.grayhavensystems.com.
+        value: protected.example.com.
       protected_txt:
         type: TXT
         name: _protected
         value: "protected=true"
 
-  jerry_smith:
-    name: jerry-smith.net
+  secondary_site:
+    name: example.net
     environment:
       apex: true
       web_aliases: true

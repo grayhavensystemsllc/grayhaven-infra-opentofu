@@ -14,7 +14,7 @@ This document describes the offline OpenTofu test suite for this repository.
 ## Purpose
 
 The OpenTofu tests provide offline plan-shape validation. They verify that
-committed policy files and static test fixtures produce the expected resource
+fictional configuration fixtures produce the expected resource
 graph for the supported workspaces without deploying infrastructure.
 
 The suite is intended to catch regressions in workspace ownership, DNS
@@ -43,8 +43,9 @@ test file:
 The test files use mocked providers, fake sensitive values, and
 `refresh = false` plans. The external vault-config lookup is mocked for
 environment tests so the suite does not need access to `grayhaven-vault`
-repository. The mocked vault lookup returns both `config.yml` and
-`firewall.yml` content.
+repository. The mocked vault lookup supplies fictional configuration.
+Test-only path overrides load independent fixtures; tests do not read live
+vault configuration.
 
 [Back to top](#opentofu-test-suite)
 
@@ -53,6 +54,7 @@ repository. The mocked vault lookup returns both `config.yml` and
 The test suite uses optional policy path overrides to load static fixture files
 from `tests/fixtures/`:
 
+- `grayhaven_test_infrastructure_policy_path`
 - `grayhaven_test_compute_policy_path`
 - `grayhaven_test_dns_policy_path`
 - `grayhaven_test_firewall_policy_path`
@@ -84,7 +86,7 @@ unprotected records, environment explicit records, unsupported DNS record
 rejection, baseline-only MX/CAA protected record handling, apex-only environment
 records, and invalid environment alias combinations.
 
-Staging and production tests verify committed policy plans for their matching
+Staging and production tests verify fixture plans for their matching
 workspaces, plus fixed scenario fixtures:
 
 - 1 bastion / 1 web host with `auto` TLS resolving to host TLS;

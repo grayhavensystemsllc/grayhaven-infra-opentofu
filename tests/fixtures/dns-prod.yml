@@ -1,0 +1,20 @@
+---
+ttl: 600
+
+domains:
+  primary_site:
+    name: example.com
+    environment:
+      apex: true
+      web_aliases: true
+    records:
+      app_cname:
+        type: CNAME
+        name: service
+        value: example.com.
+
+  secondary_site:
+    name: example.net
+    environment:
+      apex: true
+      web_aliases: true

@@ -194,7 +194,6 @@ for var in \
   TF_VAR_state_encryption_passphrase_staging \
   TF_VAR_state_encryption_passphrase_prod \
   TF_VAR_do_token \
-  TF_VAR_grayhaven_vault_repo_url \
   TF_VAR_grayhaven_vault_checkout_path \
   TF_VAR_grayhaven_ansible_deploy_public_key \
   TF_VAR_grayhaven_ansible_deploy_private_key \
@@ -213,47 +212,18 @@ done
 
 ## Edit Policy Files
 
-[Policy](policy.md) documentation details file formats for all policy files.
-Please review our
+Configure the plaintext files in `grayhaven-vault` using the
+[file schemas](https://github.com/grayhavensystemsllc/grayhaven-vault-example/blob/main/docs/schema.md).
+Use separate `staging` and `main` branch commits for environment configuration.
+Baseline reads the shared files from `main`.
+
+Commit the vault changes before running OpenTofu. The loader uses the selected
+Git ref rather than uncommitted files in the local checkout.
+
+Set `TF_VAR_grayhaven_vault_checkout_path` to that checkout. See
+[Policy Files](policy.md) for the configuration file list and
 [Infrastructure Naming & Tagging Conventions](naming-tagging-conventions.md)
-before naming resources.
-
-Review and update all `policy/baseline/` files setting values appropriate for
-shared baseline resources. Baseline values should include shared DNS zones,
-baseline-owned DNS records, and admin SSH keys.
-
-After editing all `policy/baseline/` files, review and commit them:
-
-```bash
-git status --short policy/baseline/
-git add policy/baseline/
-git commit -S -m "Configure baseline policy files"
-```
-
-Review and update all `policy/staging/` files setting values appropriate for
-staging.
-Staging values should support short-lived validation deployments before
-promotion to production.
-
-After editing all `policy/staging/` files, review and commit them:
-
-```bash
-git status --short policy/staging/
-git add policy/staging/
-git commit -S -m "Configure staging policy files"
-```
-
-Review and update all `policy/prod/` files setting values appropriate for
-production. Production values are the desired steady-state settings for the
-long-lived `prod` workspace.
-
-After editing all `policy/prod/` files, review and commit them:
-
-```bash
-git status --short policy/prod/
-git add policy/prod/
-git commit -S -m "Configure production policy files"
-```
+for generated resource names.
 
 [Back to top](#setup)
 

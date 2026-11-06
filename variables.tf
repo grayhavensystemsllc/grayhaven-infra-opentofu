@@ -46,30 +46,6 @@ variable "do_token" {
   sensitive   = true
 }
 
-variable "default_region" {
-  description = "DigitalOcean region"
-  type        = string
-  default     = "nyc3"
-}
-
-variable "default_os_image" {
-  description = "Operating system image"
-  type        = string
-  default     = "almalinux-10-x64"
-}
-
-variable "default_droplet_size" {
-  description = "DigitalOcean droplet size"
-  type        = string
-  default     = "s-1vcpu-1gb"
-}
-
-variable "baseline_vpc_cidr" {
-  description = "CIDR range for the baseline default VPC"
-  type        = string
-  default     = "10.10.0.0/16"
-}
-
 variable "grayhaven_config_repo_ref" {
   description = "Git ref used by environment cloud-init and the bastion runner when checking out grayhaven-config-ansible. Production uses main unless allow_prod_config_repo_ref_override is true."
   type        = string
@@ -85,6 +61,13 @@ variable "allow_prod_config_repo_ref_override" {
   description = "Allow the prod workspace to use grayhaven_config_repo_ref instead of main for explicit disposable production-shape testing."
   type        = bool
   default     = false
+}
+
+variable "grayhaven_test_infrastructure_policy_path" {
+  description = "Optional infrastructure policy file path override for offline plan tests. Leave unset for operational deployments."
+  type        = string
+  default     = null
+  nullable    = true
 }
 
 variable "grayhaven_test_compute_policy_path" {
@@ -122,14 +105,8 @@ variable "grayhaven_test_vault_config_path" {
   nullable    = true
 }
 
-variable "grayhaven_vault_repo_url" {
-  description = "SSH URL for grayhaven-vault, used by bastion hosts."
-  type        = string
-  default     = "git@github.com:grayhavensystemsllc/grayhaven-vault.git"
-}
-
 variable "grayhaven_vault_checkout_path" {
-  description = "Local checkout path for grayhaven-vault. OpenTofu reads config.yml and firewall.yml from this checkout."
+  description = "Local checkout path for grayhaven-vault. OpenTofu reads plaintext configuration from the selected Git ref in this checkout."
   type        = string
   default     = null
   nullable    = true

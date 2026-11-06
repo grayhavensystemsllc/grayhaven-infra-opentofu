@@ -25,8 +25,7 @@ private SSH keys, secrets, generated state, or other private operational data.
 - Manage shared baseline resources and separate staging/production runtime
   environments.
 - Provision DigitalOcean VPCs, droplets, cloud firewalls, load balancers, DNS
-  records, SSH keys, and projects based on vault, environment, and policy
-  configuration files.
+  records, SSH keys, and projects based on vault configuration files.
 - Manage resource project assignment and tagging for supported resources.
 - Bootstrap hosts into
   [`grayhaven-config-ansible`](https://github.com/grayhavensystemsllc/grayhaven-config-ansible)

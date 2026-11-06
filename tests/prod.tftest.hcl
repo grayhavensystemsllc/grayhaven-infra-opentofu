@@ -1,12 +1,14 @@
 variables {
-  grayhaven_test_compute_policy_path   = "tests/fixtures/compute-1x1-auto.yml"
-  state_encryption_passphrase_prod     = "offline-test-prod-state-passphrase"
-  do_token                             = "offline-test-token"
-  grayhaven_vault_checkout_path        = "/tmp/grayhaven-vault-offline-test"
-  grayhaven_vault_password_prod        = "offline-test-prod-vault-password"
-  grayhaven_test_ssh_keys_policy_path  = "tests/fixtures/ssh-keys-admin.yml"
-  grayhaven_ansible_deploy_public_key  = "ssh-ed25519 AAAAoffline offline@example"
-  grayhaven_ansible_deploy_private_key = <<-EOT
+  grayhaven_test_infrastructure_policy_path = "tests/fixtures/infrastructure.yml"
+  grayhaven_test_dns_policy_path            = "tests/fixtures/dns-prod.yml"
+  grayhaven_test_compute_policy_path        = "tests/fixtures/compute-1x1-auto.yml"
+  state_encryption_passphrase_prod          = "offline-test-prod-state-passphrase"
+  do_token                                  = "offline-test-token"
+  grayhaven_vault_checkout_path             = "/tmp/grayhaven-vault-offline-test"
+  grayhaven_vault_password_prod             = "offline-test-prod-vault-password"
+  grayhaven_test_ssh_keys_policy_path       = "tests/fixtures/ssh-keys-admin.yml"
+  grayhaven_ansible_deploy_public_key       = "ssh-ed25519 AAAAoffline offline@example"
+  grayhaven_ansible_deploy_private_key      = <<-EOT
     -----BEGIN OPENSSH PRIVATE KEY-----
     offline-test-private-key
     -----END OPENSSH PRIVATE KEY-----
@@ -46,7 +48,7 @@ mock_provider "digitalocean" {
       id                   = 1
       urn                  = "do:droplet:droplet-id"
       ipv4_address         = "198.51.100.10"
-      ipv4_address_private = "10.30.0.10"
+      ipv4_address_private = "172.22.0.10"
     }
   }
 
@@ -99,7 +101,7 @@ mock_provider "external" {
             environment: production
             email: admin@example.com
           network:
-            vpc_cidr: 10.30.0.0/16
+            vpc_cidr: 172.22.0.0/16
           discord_webhook: production
           backup:
             repositories:
@@ -199,8 +201,8 @@ run "prod_without_mcp_policy_plan" {
   }
 
   assert {
-    condition     = length(digitalocean_record.environment_cname) == 1 && digitalocean_record.environment_cname["grayhaven_systems.timetracker_cname"].type == "CNAME" && digitalocean_record.environment_cname["grayhaven_systems.timetracker_cname"].name == "timetracker" && digitalocean_record.environment_cname["grayhaven_systems.timetracker_cname"].value == "grayhavensystems.com."
-    error_message = "The committed production policy must include the timetracker CNAME."
+    condition     = length(digitalocean_record.environment_cname) == 1 && digitalocean_record.environment_cname["primary_site.app_cname"].type == "CNAME" && digitalocean_record.environment_cname["primary_site.app_cname"].name == "service" && digitalocean_record.environment_cname["primary_site.app_cname"].value == "example.com."
+    error_message = "The supplied DNS policy must produce the configured service CNAME."
   }
 }
 
@@ -324,7 +326,7 @@ run "prod_1x1_auto_host_plan" {
   }
 
   assert {
-    condition     = digitalocean_record.web_root_a["grayhaven_systems"].name == "@" && digitalocean_record.web_dev_cname["jerry_smith"].name == "dev"
+    condition     = digitalocean_record.web_root_a["primary_site"].name == "@" && digitalocean_record.web_dev_cname["secondary_site"].name == "dev"
     error_message = "Production must plan computed environment DNS records from DNS policy."
   }
 
@@ -455,7 +457,7 @@ run "prod_2x2_auto_load_balancer_plan" {
       for rule in output.web_firewall_inbound_rules :
       rule if rule.protocol == "tcp" &&
       rule.port_range == "8791" &&
-      jsonencode(rule.source_tags) == jsonencode(["scope-grayhaven-core-prod-web"])
+      jsonencode(rule.source_tags) == jsonencode(["scope-example-core-prod-web"])
     ]) == 1
     error_message = "Production multi-web load-balancer plans must allow private deploy fanout ingress from web hosts."
   }
@@ -465,19 +467,19 @@ run "prod_2x2_auto_load_balancer_plan" {
       for rule in local.web_firewall_outbound_rules :
       rule if rule.protocol == "tcp" &&
       rule.port_range == "8791" &&
-      jsonencode(rule.destination_tags) == jsonencode(["scope-grayhaven-core-prod-web"])
+      jsonencode(rule.destination_tags) == jsonencode(["scope-example-core-prod-web"])
     ]) == 1
     error_message = "Production multi-web load-balancer plans must allow private deploy fanout egress to web hosts."
   }
 
   assert {
     condition = jsonencode(output.web_certificate_domain_names) == jsonencode([
-      "grayhavensystems.com",
-      "www.grayhavensystems.com",
-      "dev.grayhavensystems.com",
-      "jerry-smith.net",
-      "www.jerry-smith.net",
-      "dev.jerry-smith.net"
+      "example.com",
+      "www.example.com",
+      "dev.example.com",
+      "example.net",
+      "www.example.net",
+      "dev.example.net"
     ])
     error_message = "Production load-balancer certificate names must keep the per-domain apex, www, dev order."
   }
@@ -501,7 +503,7 @@ run "prod_apex_only_dns_plan" {
   }
 
   assert {
-    condition     = length(digitalocean_record.web_root_a) == 1 && digitalocean_record.web_root_a["grayhaven_systems"].name == "@"
+    condition     = length(digitalocean_record.web_root_a) == 1 && digitalocean_record.web_root_a["primary_site"].name == "@"
     error_message = "Production apex DNS must be optional and independent from web aliases."
   }
 
@@ -511,7 +513,7 @@ run "prod_apex_only_dns_plan" {
   }
 
   assert {
-    condition     = jsonencode(output.web_certificate_domain_names) == jsonencode(["grayhavensystems.com"])
+    condition     = jsonencode(output.web_certificate_domain_names) == jsonencode(["example.com"])
     error_message = "Production apex-only DNS must request only the apex certificate name."
   }
 }
@@ -588,9 +590,9 @@ run "prod_explicit_dns_record_plan" {
 
   assert {
     condition = (
-      digitalocean_record.environment_a["grayhaven_systems.infrastructure_notice_a"].type == "A" &&
-      digitalocean_record.environment_cname["grayhaven_systems.infrastructure_notice_cname"].type == "CNAME" &&
-      digitalocean_record.environment_txt["grayhaven_systems.infrastructure_notice_txt"].type == "TXT"
+      digitalocean_record.environment_a["primary_site.infrastructure_notice_a"].type == "A" &&
+      digitalocean_record.environment_cname["primary_site.infrastructure_notice_cname"].type == "CNAME" &&
+      digitalocean_record.environment_txt["primary_site.infrastructure_notice_txt"].type == "TXT"
     )
     error_message = "Production environment DNS records must support A, CNAME, and TXT records."
   }
@@ -724,7 +726,7 @@ run "prod_bastion_only_plan" {
   }
 
   assert {
-    condition     = alltrue([for rule in local.firewall_policy_rules.bastion.outbound : !contains(rule.destination_tags, "scope-grayhaven-core-prod-web")])
+    condition     = alltrue([for rule in local.firewall_policy_rules.bastion.outbound : !contains(rule.destination_tags, "scope-example-core-prod-web")])
     error_message = "Bastion egress must not reference an absent web scope tag."
   }
 }
@@ -761,7 +763,7 @@ run "prod_bastion_mcp_plan" {
   }
 
   assert {
-    condition     = alltrue([for rule in local.firewall_policy_rules.bastion.outbound : !contains(rule.destination_tags, "scope-grayhaven-core-prod-web")])
+    condition     = alltrue([for rule in local.firewall_policy_rules.bastion.outbound : !contains(rule.destination_tags, "scope-example-core-prod-web")])
     error_message = "Bastion egress must not reference an absent web scope tag."
   }
 }
@@ -798,7 +800,7 @@ run "prod_no_web_load_balancer_plan" {
   }
 
   assert {
-    condition     = alltrue([for rule in local.firewall_policy_rules.bastion.outbound : !contains(rule.destination_tags, "scope-grayhaven-core-prod-web")])
+    condition     = alltrue([for rule in local.firewall_policy_rules.bastion.outbound : !contains(rule.destination_tags, "scope-example-core-prod-web")])
     error_message = "Bastion egress must not reference an absent web scope tag."
   }
 }

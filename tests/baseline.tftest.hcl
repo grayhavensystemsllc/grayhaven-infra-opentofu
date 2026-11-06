@@ -1,3 +1,17 @@
+variables {
+  grayhaven_test_infrastructure_policy_path = "tests/fixtures/infrastructure.yml"
+  grayhaven_test_dns_policy_path            = "tests/fixtures/dns-baseline-shared-records.yml"
+  grayhaven_vault_checkout_path             = "/tmp/example-vault-offline-test"
+}
+
+mock_provider "external" {
+  mock_data "external" {
+    defaults = {
+      result = {}
+    }
+  }
+}
+
 mock_provider "digitalocean" {
   mock_resource "digitalocean_domain" {
     defaults = {
@@ -25,7 +39,7 @@ mock_provider "digitalocean" {
   }
 }
 
-run "baseline_committed_policy_plan" {
+run "baseline_configured_policy_plan" {
   command = plan
 
   plan_options {
@@ -34,6 +48,7 @@ run "baseline_committed_policy_plan" {
 
   providers = {
     digitalocean = digitalocean
+    external     = external
   }
 
   variables {
@@ -50,7 +65,7 @@ run "baseline_committed_policy_plan" {
 
   assert {
     condition     = output.workspace == "baseline"
-    error_message = "The committed baseline policy must plan in the baseline workspace."
+    error_message = "The baseline fixture policy must plan in the baseline workspace."
   }
 }
 
@@ -63,6 +78,7 @@ run "baseline_fixture_plan" {
 
   providers = {
     digitalocean = digitalocean
+    external     = external
   }
 
   variables {
@@ -79,7 +95,7 @@ run "baseline_fixture_plan" {
   }
 
   assert {
-    condition     = digitalocean_project.grayhaven[0].name == "grayhaven"
+    condition     = digitalocean_project.grayhaven[0].name == "example"
     error_message = "The baseline plan must include the shared DigitalOcean project."
   }
 
@@ -114,7 +130,7 @@ run "baseline_fixture_plan" {
   }
 
   assert {
-    condition     = digitalocean_vpc.baseline[0].name == "grayhaven-core-baseline-vpc"
+    condition     = digitalocean_vpc.baseline[0].name == "example-core-baseline-vpc"
     error_message = "The baseline plan must include the protected baseline VPC."
   }
 
@@ -133,6 +149,7 @@ run "baseline_unprotected_dns_record_plan" {
 
   providers = {
     digitalocean = digitalocean
+    external     = external
   }
 
   variables {
@@ -159,9 +176,9 @@ run "baseline_unprotected_dns_record_plan" {
 
   assert {
     condition = (
-      digitalocean_record.baseline_a["grayhaven_systems.infrastructure_notice_a"].type == "A" &&
-      digitalocean_record.baseline_cname["grayhaven_systems.infrastructure_notice_cname"].type == "CNAME" &&
-      digitalocean_record.baseline_txt["grayhaven_systems.infrastructure_notice_txt"].type == "TXT"
+      digitalocean_record.baseline_a["primary_site.infrastructure_notice_a"].type == "A" &&
+      digitalocean_record.baseline_cname["primary_site.infrastructure_notice_cname"].type == "CNAME" &&
+      digitalocean_record.baseline_txt["primary_site.infrastructure_notice_txt"].type == "TXT"
     )
     error_message = "The unprotected DNS record collection must support A, CNAME, and TXT records."
   }
@@ -181,6 +198,7 @@ run "baseline_unsupported_dns_record_type_rejected" {
 
   providers = {
     digitalocean = digitalocean
+    external     = external
   }
 
   variables {

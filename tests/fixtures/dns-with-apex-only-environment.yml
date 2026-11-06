@@ -2,14 +2,14 @@
 ttl: 300
 
 domains:
-  grayhaven_systems:
-    name: grayhavensystems.com
+  primary_site:
+    name: example.com
     environment:
       apex: true
       web_aliases: false
 
-  jerry_smith:
-    name: jerry-smith.net
+  secondary_site:
+    name: example.net
     environment:
       apex: false
       web_aliases: false

@@ -3,7 +3,7 @@ certificate:
   environment: production
   email: admin@example.com
 network:
-  vpc_cidr: 10.30.0.0/16
+  vpc_cidr: 172.22.0.0/16
 discord_webhook: production
 
 observability:

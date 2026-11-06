@@ -2,8 +2,8 @@
 ttl: 300
 
 domains:
-  grayhaven_systems:
-    name: grayhavensystems.com
+  primary_site:
+    name: example.com
     environment:
       apex: false
       web_aliases: true

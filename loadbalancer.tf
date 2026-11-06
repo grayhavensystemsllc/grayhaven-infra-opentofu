@@ -16,7 +16,7 @@ resource "tls_self_signed_cert" "web_lb_staging" {
 
   subject {
     common_name  = try(local.web_domain_names[0], "localhost")
-    organization = "Grayhaven Systems LLC"
+    organization = local.organization
   }
 }
 
@@ -49,7 +49,7 @@ resource "digitalocean_loadbalancer" "web" {
   count = local.use_load_balancer ? 1 : 0
 
   name                   = "${local.client_name}-core-${local.environment}-web-lb"
-  region                 = var.default_region
+  region                 = local.default_region
   vpc_uuid               = module.vpc[0].id
   droplet_ids            = [for droplet in module.web : droplet.id]
   redirect_http_to_https = true

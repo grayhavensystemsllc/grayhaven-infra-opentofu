@@ -1,11 +1,13 @@
 variables {
-  state_encryption_passphrase_staging  = "offline-test-staging-state-passphrase"
-  do_token                             = "offline-test-token"
-  grayhaven_vault_checkout_path        = "/tmp/grayhaven-vault-offline-test"
-  grayhaven_vault_password_staging     = "offline-test-staging-vault-password"
-  grayhaven_test_ssh_keys_policy_path  = "tests/fixtures/ssh-keys-admin.yml"
-  grayhaven_ansible_deploy_public_key  = "ssh-ed25519 AAAAoffline offline@example"
-  grayhaven_ansible_deploy_private_key = <<-EOT
+  grayhaven_test_infrastructure_policy_path = "tests/fixtures/infrastructure.yml"
+  grayhaven_test_dns_policy_path            = "tests/fixtures/dns-staging.yml"
+  state_encryption_passphrase_staging       = "offline-test-staging-state-passphrase"
+  do_token                                  = "offline-test-token"
+  grayhaven_vault_checkout_path             = "/tmp/grayhaven-vault-offline-test"
+  grayhaven_vault_password_staging          = "offline-test-staging-vault-password"
+  grayhaven_test_ssh_keys_policy_path       = "tests/fixtures/ssh-keys-admin.yml"
+  grayhaven_ansible_deploy_public_key       = "ssh-ed25519 AAAAoffline offline@example"
+  grayhaven_ansible_deploy_private_key      = <<-EOT
     -----BEGIN OPENSSH PRIVATE KEY-----
     offline-test-private-key
     -----END OPENSSH PRIVATE KEY-----
@@ -45,7 +47,7 @@ mock_provider "digitalocean" {
       id                   = 1
       urn                  = "do:droplet:droplet-id"
       ipv4_address         = "203.0.113.10"
-      ipv4_address_private = "10.20.0.10"
+      ipv4_address_private = "172.21.0.10"
     }
   }
 
@@ -98,7 +100,7 @@ mock_provider "external" {
             environment: staging
             email: admin@example.com
           network:
-            vpc_cidr: 10.20.0.0/16
+            vpc_cidr: 172.21.0.0/16
           discord_webhook: testing
           backup:
             repositories:
@@ -197,11 +199,11 @@ run "staging_mcp_host_plan" {
   }
 
   assert {
-    condition     = length(module.mcp) == 1 && local.mcp_hosts["mcp-01"].size == "s-1vcpu-1gb" && local.mcp_hosts["mcp-01"].hostname == "grayhaven-core-staging-mcp-01.staging.grayhavensystems.com"
-    error_message = "The input staging policy must include exactly one 1 GiB MCP host."
+    condition     = length(module.mcp) == 1 && local.mcp_hosts["mcp-01"].size == local.infrastructure_policy.defaults.droplet_size && local.mcp_hosts["mcp-01"].hostname == "example-core-staging-mcp-01.staging.example.com"
+    error_message = "The input staging policy must include one MCP host using the configured default size."
   }
   assert {
-    condition     = contains(local.mcp_hosts["mcp-01"].tags, "role-mcp") && contains(local.mcp_hosts["mcp-01"].tags, "scope-grayhaven-core-staging-mcp") && digitalocean_record.grayhaven_mcp_a[0].name == "mcp.staging"
+    condition     = contains(local.mcp_hosts["mcp-01"].tags, "role-mcp") && contains(local.mcp_hosts["mcp-01"].tags, "scope-example-core-staging-mcp") && digitalocean_record.grayhaven_mcp_a[0].name == "mcp.staging"
     error_message = "MCP must use its own role/scope tags and staging endpoint."
   }
   assert {
@@ -209,7 +211,7 @@ run "staging_mcp_host_plan" {
     error_message = "MCP bootstrap must hand off its role without private deploy keys or Vault passwords."
   }
   assert {
-    condition     = length(output.mcp_firewall_inbound_rules) == 2 && alltrue([for rule in output.mcp_firewall_inbound_rules : rule.port_range != "80" && (rule.port_range != "22" || (length(rule.source_addresses) == 0 && jsonencode(rule.source_tags) == jsonencode(["scope-grayhaven-sec-staging-bastion"])))])
+    condition     = length(output.mcp_firewall_inbound_rules) == 2 && alltrue([for rule in output.mcp_firewall_inbound_rules : rule.port_range != "80" && (rule.port_range != "22" || (length(rule.source_addresses) == 0 && jsonencode(rule.source_tags) == jsonencode(["scope-example-sec-staging-bastion"])))])
     error_message = "MCP ingress must allow HTTPS and bastion-only SSH without HTTP."
   }
 
@@ -291,7 +293,7 @@ run "staging_1x1_auto_host_plan" {
   }
 
   assert {
-    condition     = digitalocean_record.web_root_a["grayhaven_systems"].name == "staging" && digitalocean_record.web_dev_cname["jerry_smith"].name == "dev.staging"
+    condition     = digitalocean_record.web_root_a["primary_site"].name == "staging" && digitalocean_record.web_dev_cname["secondary_site"].name == "dev.staging"
     error_message = "Staging must plan computed environment DNS records from DNS policy."
   }
 
@@ -366,7 +368,7 @@ run "staging_2x2_auto_load_balancer_plan" {
       for rule in output.web_firewall_inbound_rules :
       rule if rule.protocol == "tcp" &&
       rule.port_range == "8791" &&
-      jsonencode(rule.source_tags) == jsonencode(["scope-grayhaven-core-staging-web"])
+      jsonencode(rule.source_tags) == jsonencode(["scope-example-core-staging-web"])
     ]) == 1
     error_message = "Staging multi-web load-balancer plans must allow private deploy fanout ingress from web hosts."
   }
@@ -376,19 +378,19 @@ run "staging_2x2_auto_load_balancer_plan" {
       for rule in local.web_firewall_outbound_rules :
       rule if rule.protocol == "tcp" &&
       rule.port_range == "8791" &&
-      jsonencode(rule.destination_tags) == jsonencode(["scope-grayhaven-core-staging-web"])
+      jsonencode(rule.destination_tags) == jsonencode(["scope-example-core-staging-web"])
     ]) == 1
     error_message = "Staging multi-web load-balancer plans must allow private deploy fanout egress to web hosts."
   }
 
   assert {
     condition = jsonencode(output.web_certificate_domain_names) == jsonencode([
-      "staging.grayhavensystems.com",
-      "www.staging.grayhavensystems.com",
-      "dev.staging.grayhavensystems.com",
-      "staging.jerry-smith.net",
-      "www.staging.jerry-smith.net",
-      "dev.staging.jerry-smith.net"
+      "staging.example.com",
+      "www.staging.example.com",
+      "dev.staging.example.com",
+      "staging.example.net",
+      "www.staging.example.net",
+      "dev.staging.example.net"
     ])
     error_message = "Staging load-balancer certificate names must keep the per-domain apex, www, dev order."
   }
@@ -412,7 +414,7 @@ run "staging_apex_only_dns_plan" {
   }
 
   assert {
-    condition     = length(digitalocean_record.web_root_a) == 1 && digitalocean_record.web_root_a["grayhaven_systems"].name == "staging"
+    condition     = length(digitalocean_record.web_root_a) == 1 && digitalocean_record.web_root_a["primary_site"].name == "staging"
     error_message = "Staging apex DNS must be optional and independent from web aliases."
   }
 
@@ -422,7 +424,7 @@ run "staging_apex_only_dns_plan" {
   }
 
   assert {
-    condition     = jsonencode(output.web_certificate_domain_names) == jsonencode(["staging.grayhavensystems.com"])
+    condition     = jsonencode(output.web_certificate_domain_names) == jsonencode(["staging.example.com"])
     error_message = "Staging apex-only DNS must request only the apex certificate name."
   }
 }
@@ -543,9 +545,9 @@ run "staging_explicit_dns_record_plan" {
 
   assert {
     condition = (
-      digitalocean_record.environment_a["grayhaven_systems.infrastructure_notice_a"].type == "A" &&
-      digitalocean_record.environment_cname["grayhaven_systems.infrastructure_notice_cname"].type == "CNAME" &&
-      digitalocean_record.environment_txt["grayhaven_systems.infrastructure_notice_txt"].type == "TXT"
+      digitalocean_record.environment_a["primary_site.infrastructure_notice_a"].type == "A" &&
+      digitalocean_record.environment_cname["primary_site.infrastructure_notice_cname"].type == "CNAME" &&
+      digitalocean_record.environment_txt["primary_site.infrastructure_notice_txt"].type == "TXT"
     )
     error_message = "Staging environment DNS records must support A, CNAME, and TXT records."
   }
@@ -687,7 +689,7 @@ run "staging_bastion_only_plan" {
   }
 
   assert {
-    condition     = alltrue([for rule in local.firewall_policy_rules.bastion.outbound : !contains(rule.destination_tags, "scope-grayhaven-core-staging-web")])
+    condition     = alltrue([for rule in local.firewall_policy_rules.bastion.outbound : !contains(rule.destination_tags, "scope-example-core-staging-web")])
     error_message = "Bastion egress must not reference an absent web scope tag."
   }
 }
@@ -724,7 +726,7 @@ run "staging_bastion_mcp_plan" {
   }
 
   assert {
-    condition     = alltrue([for rule in local.firewall_policy_rules.bastion.outbound : !contains(rule.destination_tags, "scope-grayhaven-core-staging-web")])
+    condition     = alltrue([for rule in local.firewall_policy_rules.bastion.outbound : !contains(rule.destination_tags, "scope-example-core-staging-web")])
     error_message = "Bastion egress must not reference an absent web scope tag."
   }
 }
@@ -761,7 +763,7 @@ run "staging_no_web_load_balancer_plan" {
   }
 
   assert {
-    condition     = alltrue([for rule in local.firewall_policy_rules.bastion.outbound : !contains(rule.destination_tags, "scope-grayhaven-core-staging-web")])
+    condition     = alltrue([for rule in local.firewall_policy_rules.bastion.outbound : !contains(rule.destination_tags, "scope-example-core-staging-web")])
     error_message = "Bastion egress must not reference an absent web scope tag."
   }
 }

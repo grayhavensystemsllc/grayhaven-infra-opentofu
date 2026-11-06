@@ -127,7 +127,7 @@ Vault passphrase, deployment SSH keypair, and control-node flag. Those values
 are used only to prepare the first runner execution. The bootstrap playbook
 removes the handoff file before starting the initial full convergence run.
 
-Environment workspaces read `config.yml` and `firewall.yml` from the intended
+Environment workspaces read plaintext configuration from the intended
 `grayhaven-vault` Git ref instead of whichever branch is checked out locally.
 Production uses the `main` ref and staging uses the `staging` ref. The
 environment VPC CIDR comes from `config.yml` `network.vpc_cidr`.

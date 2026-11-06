@@ -1,11 +1,11 @@
 resource "digitalocean_project" "grayhaven" {
   count = local.is_baseline ? 1 : 0
 
-  name        = "grayhaven"
-  description = "Infrastructure project for Grayhaven Systems LLC"
-  purpose     = "Web Application"
-  environment = "Production"
-  is_default  = true
+  name        = local.infrastructure_policy.project.name
+  description = local.infrastructure_policy.project.description
+  purpose     = local.infrastructure_policy.project.purpose
+  environment = local.infrastructure_policy.project.environment
+  is_default  = local.infrastructure_policy.project.is_default
 
   lifecycle {
     prevent_destroy = true

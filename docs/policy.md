@@ -1,292 +1,77 @@
 # Policy Files
 
-Committed policy files define the intended infrastructure shape for each
-workspace environment. This document describes the supported policy file
-schemas.
+OpenTofu reads plaintext configuration from the selected `grayhaven-vault`
+Git ref. File schemas and examples are documented in
+[grayhaven-vault-example](https://github.com/grayhavensystemsllc/grayhaven-vault-example/blob/main/docs/schema.md).
 
 ## Table of Contents
 
 - [Overview](#overview)
+- [Infrastructure Configuration](#infrastructure-configuration)
 - [DNS Policy](#dns-policy)
-  - [DNS Policy Schema](#dns-policy-schema)
-  - [Baseline DNS Policy](#baseline-dns-policy)
-  - [Environment DNS Policy](#environment-dns-policy)
 - [Firewall Policy](#firewall-policy)
 - [Admin SSH Key Policy](#admin-ssh-key-policy)
 - [Compute Policy](#compute-policy)
 
 ## Overview
 
-Each workspace environment contains a set of policy configuration files stored
-in `policy/<workspace>`.
+Set `TF_VAR_grayhaven_vault_checkout_path` to the local vault checkout.
+Baseline and production read `main`; staging reads `staging`. OpenTofu reads
+committed files from that ref, regardless of the checked-out branch.
 
-The `baseline` workspace environment supports DNS and admin SSH key policy
-configuration. All other workspace environments support compute and DNS policy
-configuration.
+| File | Configuration |
+| --- | --- |
+| `infrastructure.yml` | Identity, project, defaults, repositories, VPC |
+| `compute.yml` | Environment server instances and web TLS mode |
+| `dns.yml` | Environment DNS records |
+| `baseline/dns.yml` | Shared DNS zones and records |
+| `baseline/ssh-keys.yml` | First-boot admin public keys |
+| `config.yml` | Certificate, environment network and observability selectors |
+| `firewall.yml` | Shared cloud and host firewall policy |
+
+[Back to top](#policy-files)
+
+## Infrastructure Configuration
+
+`infrastructure.yml` supplies resource identity, DigitalOcean project settings,
+provider defaults, baseline VPC CIDR and bootstrap repository URLs.
 
 [Back to top](#policy-files)
 
 ## DNS Policy
 
-DNS zones and records are handled by DNS policy files and through computed,
-automatic DNS records set up by OpenTofu and DigitalOcean. For more information
-on automatic records, please see the [DNS architecture documentation](dns-architecture.md).
-
-### DNS Policy Schema
-
-Supported top-level keys:
-
-- `ttl`: default TTL for managed DNS records.
-- `domains`: map of managed domain entries.
-
-Supported domain keys:
-
-- `domains.<domain_key>.name`: public domain name.
-- `domains.<domain_key>.protected_records`: Optional. DNS records with OpenTofu
-  destroy protection.
-- `domains.<domain_key>.records`: Optional. DNS records without OpenTofu destroy
-  protection.
-
-`protected_records` supports these DNS record types:
-
-- `A`
-- `CNAME`
-- `TXT`
-
-`records` supports these DNS record types:
-
-- `A`
-- `CNAME`
-- `TXT`
-
-Each record entry supports:
-
-- `type`: DNS record type.
-- `name`: record name.
-- `value`: record target or value.
-- `ttl`: optional per-record TTL override.
-
-### Baseline DNS Policy
-
-`policy/baseline/dns.yml` is intended to set up the DNS zone for each supported
-domain and any records that would be shared across workspace environments, such
-as mail-related records.
-
-Baseline DNS policy supports the following additional `protected_records` types:
-
-- `MX`
-- `CAA`
-
-MX records support a `priority` attribute for MX-specific record compatibility.
-
-CAA records support `flags` and `tag` attributes for CAA-specific record
-compatibility.
-
-All supported domains should be defined in this file.
-
-Example shape:
-
-```yaml
-ttl: 300
-
-domains:
-  example:
-    name: example.com
-    protected_records:
-      mail_a:
-        type: A
-        name: mail
-        value: 192.0.2.10
-      mx_primary:
-        type: MX
-        name: "@"
-        value: mail.example.com.
-        priority: 10
-      spf_txt:
-        type: TXT
-        name: "@"
-        value: "v=spf1 include:mail.example.com ~all"
-      caa_letsencrypt:
-        type: CAA
-        name: "@"
-        flags: 0
-        tag: issue
-        value: letsencrypt.org.
-    records:
-      status_txt:
-        type: TXT
-        name: status
-        value: "status=ok"
-```
-
-### Environment DNS Policy
-
-Environment-specific records are created in `policy/<workspace>/dns.yml` and use
-the same format with the addition of an `environment` domain key:
-
-- `domains.<domain_key>.environment.apex`: automatically creates an A record for
-  the environment apex. Optional. Defaults to false.
-- `domains.<domain_key>.environment.web_aliases`: automatically creates `www`
-  and `dev` CNAME aliases to the environment apex. Optional. Defaults to false.
-
-Setting `environment.web_aliases` to true requires that `environment.apex` also
-be true. Valid combinations are true/true, true/false, and false/false.
-
-If you have any `hosted_domains` configured in
-`grayhaven-vault`, it is
-strongly recommended that you set `environment.web_aliases` and
-`environment.apex` to true.
-
-Example shape:
-
-```yaml
-ttl: 300
-
-domains:
-  example:
-    name: example.com
-    environment:
-      apex: true
-      web_aliases: true
-```
+Baseline owns shared zones and mail records in `baseline/dns.yml`.
+Environment workspaces use `dns.yml` for explicit records and computed web
+records. See [DNS Architecture](dns-architecture.md).
 
 [Back to top](#policy-files)
 
 ## Firewall Policy
 
-Firewall policy is managed through `firewall.yml` in the private
-`grayhaven-vault` repository.
-This keeps DigitalOcean cloud firewall policy and host firewalld policy tied to
-the same environment-specific configuration.
-
-OpenTofu reads `firewall.yml` from the local vault checkout during plan and
-apply. [`grayhaven-config-ansible`](https://github.com/grayhavensystemsllc/grayhaven-config-ansible)
-reads the same file from the vault checkout on the active control bastion during
-convergence.
-
-When load-balancer TLS is active, OpenTofu derives the effective web cloud
-firewall from `firewall.yml` by allowing web origin HTTP from the DigitalOcean
-load balancer and omitting direct web origin HTTPS.
-
-When load-balancer TLS is active with two or more web hosts, OpenTofu also adds
-web-to-web TCP `8791` cloud firewall rules scoped to the environment web tag.
-This private path is reserved for website deployment fanout between web hosts.
-Single-web-host environments do not receive these fanout rules.
-
-The web inbound firewall policy must include TCP `80` and TCP `443` rules.
-OpenTofu validates that shape before applying the TLS-mode-specific effective
-firewall.
-
-The public
-[grayhaven-vault-example](https://github.com/grayhavensystemsllc/grayhaven-vault-example)
-repository documents the expected
-[firewall.yml schema](https://github.com/grayhavensystemsllc/grayhaven-vault-example/blob/main/docs/schema.md#firewallyml).
+OpenTofu and Ansible read the same environment-specific `firewall.yml`.
+Load-balancer TLS derives web origin rules from that policy. Multi-web-host
+load-balanced environments also receive a web-tag-scoped TCP `8791` path for
+deployment fanout.
 
 [Back to top](#policy-files)
 
 ## Admin SSH Key Policy
 
-The `policy/baseline/ssh-keys.yml` policy configuration file defines public SSH
-keys that are provided to DigitalOcean for first-boot SSH access to new servers.
-The bootstrap account is removed by
-[`grayhaven-config-ansible`](https://github.com/grayhavensystemsllc/grayhaven-config-ansible)
-during convergence.
-
-These keys are only useful for first-boot access and configuration. If you are
-looking to manage user SSH access to a server, please refer to the
-[managing users documentation](https://github.com/grayhavensystemsllc/grayhaven-vault-example/blob/main/docs/operations.md#managing-users)
-in the
-[`grayhaven-vault-example`](https://github.com/grayhavensystemsllc/grayhaven-vault-example)
-repository and modify
-`grayhaven-vault` appropriately.
-
-Supported top-level keys:
-
-- `admin_ssh_keys`: list of managed admin SSH public keys.
-
-Example shape:
-
-```yaml
-admin_ssh_keys:
-  - >-
-    ssh-ed25519
-    AAAAexamplePublicKeyMaterial
-    admin@example.com
-```
+`baseline/ssh-keys.yml` supplies admin public keys for first-boot access.
+Baseline manages the DigitalOcean key resources; environment workspaces look
+them up by name. Private keys remain outside these plaintext policy files.
 
 [Back to top](#policy-files)
 
 ## Compute Policy
 
-`policy/staging/compute.yml` and `policy/prod/compute.yml` declare bastion
-instances, web instances, the active control bastion, and web TLS mode.
+`compute.yml` supplies instance maps for `bastion`, `web`, and `mcp` roles.
+An environment requires at least one bastion. Web hosts may be omitted, and
+MCP permits at most one instance. Instance `size` and `image` values override
+the defaults in `infrastructure.yml`.
 
-Supported top-level keys:
-
-- `bastions`: bastion role policy.
-- `web`: web role policy.
-
-Supported bastion keys:
-
-- `bastions.control_node`: bastion instance key selected as the active control
-  bastion.
-- `bastions.instances`: map of bastion instances.
-- `bastions.instances.<instance_key>.index`: numeric index used for generated
-  resource names.
-- `bastions.instances.<instance_key>.size`: optional DigitalOcean droplet size.
-- `bastions.instances.<instance_key>.image`: optional DigitalOcean image slug.
-
-Supported web keys:
-
-- `web.tls_mode`: `auto` or `load_balancer`.
-- `web.instances`: map of web instances.
-- `web.instances.<instance_key>.index`: numeric index used for generated
-  resource names.
-- `web.instances.<instance_key>.size`: optional DigitalOcean droplet size.
-- `web.instances.<instance_key>.image`: optional DigitalOcean image slug.
-
-`bastions.control_node` must match a key under `bastions.instances`. Each
-environment compute policy must define at least one bastion host. Set
-`web.instances: {}` to omit web hosts and their firewall, scope tag, automatic
-web DNS, load balancer, and certificate. Explicit DNS records remain
-policy-controlled.
-`web.tls_mode` defaults to `auto` when omitted.
-
-Supported TLS modes:
-
-- `auto`: uses host TLS when the environment has one web host and load-balancer
-  TLS when the environment has two or more web hosts.
-- `load_balancer`: uses DigitalOcean load-balancer TLS when web hosts exist.
-
-Host TLS points web DNS at the primary web host. Load-balancer TLS creates a
-DigitalOcean load balancer, points web DNS at the load balancer, and configures
-web hosts as HTTP backends for load-balanced traffic.
-Environments with two or more web hosts must resolve to load-balancer TLS.
-
-Example shape:
-
-```yaml
-bastions:
-  control_node: bastion-01
-  instances:
-    bastion-01:
-      index: 1
-
-web:
-  tls_mode: auto
-  instances:
-    web-01:
-      index: 1
-```
+`web.tls_mode: auto` uses host TLS for one web host and load-balancer TLS for
+multiple web hosts. `load_balancer` selects load-balancer TLS when web hosts
+exist. MCP uses host TLS.
 
 [Back to top](#policy-files)
-
-## MCP hosts
-
-The optional `mcp.instances` compute-policy map permits at most one host per
-environment. Set `mcp.instances: {}` to omit MCP hosts and their resources.
-MCP hosts use the environment VPC, `project-core` and `role-mcp` tags, a dedicated
-scope firewall, host DNS and the `mcp[.staging].grayhavensystems.com` endpoint.
-The Vault `firewalls.mcp` policy must provide HTTPS and restrict SSH ingress to
-bastions. The bootstrap handoff provides the host role and existing public
-Ansible key; application credentials and paths are configured by convergence.
