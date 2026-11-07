@@ -132,4 +132,9 @@ Environment workspaces read plaintext configuration from the intended
 Production uses the `main` ref and staging uses the `staging` ref. The
 environment VPC CIDR comes from `config.yml` `network.vpc_cidr`.
 
+Bootstrap role settings are loaded from the selected Vault branch's
+`operations.yml`. The current control public key comes from
+`compute.yml` at `bootstrap.control_public_key`; bootstrap installs it alongside
+the deployment public key so existing control nodes can manage new hosts.
+
 [Back to top](#runtime-architecture)

@@ -24,6 +24,11 @@ resource "terraform_data" "environment_policy_guard" {
     }
 
     precondition {
+      condition     = can(regex("^(ssh-ed25519|ssh-rsa|ecdsa-sha2-[^ ]+) [A-Za-z0-9+/=]+", local.bootstrap_control_public_key))
+      error_message = "compute.yml bootstrap.control_public_key must contain an SSH public key."
+    }
+
+    precondition {
       condition     = local.is_environment ? contains(["auto", "load_balancer"], local.web_tls_setting) : true
       error_message = "The compute policy web.tls_mode value must be auto or load_balancer."
     }

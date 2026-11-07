@@ -42,6 +42,7 @@ print(
             "firewall_yml": read_ref_file("firewall.yml"),
             "infrastructure_yml": read_ref_file("infrastructure.yml"),
             "compute_yml": read_ref_file("compute.yml"),
+            "operations_yml": read_ref_file("operations.yml"),
             "dns_yml": read_ref_file("dns.yml"),
             "baseline_dns_yml": read_ref_file("baseline/dns.yml"),
             "ssh_keys_yml": read_ref_file("baseline/ssh-keys.yml"),

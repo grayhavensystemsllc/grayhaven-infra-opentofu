@@ -14,6 +14,7 @@ FILES = {
     "firewall_yml": "firewall.yml",
     "infrastructure_yml": "infrastructure.yml",
     "compute_yml": "compute.yml",
+    "operations_yml": "operations.yml",
     "dns_yml": "dns.yml",
     "baseline_dns_yml": "baseline/dns.yml",
     "ssh_keys_yml": "baseline/ssh-keys.yml",
