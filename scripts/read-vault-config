@@ -6,47 +6,9 @@ if [[ $# -ne 2 ]]; then
   exit 1
 fi
 
-vault_checkout_path="$1"
-vault_ref="$2"
-
-if [[ ! -d "${vault_checkout_path}/.git" ]]; then
-  printf 'Vault checkout is not a Git repository: %s\n' "$vault_checkout_path" >&2
+if [[ ! -d "$1/.git" || -z "$2" ]]; then
+  printf 'A Vault Git checkout and ref are required.\n' >&2
   exit 1
 fi
 
-if [[ -z "$vault_ref" ]]; then
-  printf 'Vault ref must not be empty.\n' >&2
-  exit 1
-fi
-
-python3 - "$vault_checkout_path" "$vault_ref" <<'PY'
-import json
-import subprocess
-import sys
-
-vault_checkout_path = sys.argv[1]
-vault_ref = sys.argv[2]
-
-
-def read_ref_file(path):
-    return subprocess.check_output(
-        ["git", "-C", vault_checkout_path, "show", f"{vault_ref}:{path}"],
-        text=True,
-    )
-
-
-print(
-    json.dumps(
-        {
-            "config_yml": read_ref_file("config.yml"),
-            "firewall_yml": read_ref_file("firewall.yml"),
-            "infrastructure_yml": read_ref_file("infrastructure.yml"),
-            "compute_yml": read_ref_file("compute.yml"),
-            "operations_yml": read_ref_file("operations.yml"),
-            "dns_yml": read_ref_file("dns.yml"),
-            "baseline_dns_yml": read_ref_file("baseline/dns.yml"),
-            "ssh_keys_yml": read_ref_file("baseline/ssh-keys.yml"),
-        }
-    )
-)
-PY
+exec python3 "$(dirname -- "$0")/read_vault_config.py" "$@"

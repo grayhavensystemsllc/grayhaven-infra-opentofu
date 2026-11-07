@@ -212,10 +212,12 @@ done
 
 ## Edit Policy Files
 
-Configure the plaintext files in `grayhaven-vault` using the
+Configure the files in `grayhaven-vault` using the
 [file schemas](https://github.com/grayhavensystemsllc/grayhaven-vault-example/blob/main/docs/schema.md).
 Use separate `staging` and `main` branch commits for environment configuration.
-Baseline reads the shared files from `main`.
+Baseline reads the shared files from `main`. Environment plans also read
+`ansible_control.public_key` from encrypted `vault/bastion.yml` with the
+existing environment Vault password.
 
 Commit the vault changes before running OpenTofu. The loader uses the selected
 Git ref rather than uncommitted files in the local checkout.
@@ -254,9 +256,11 @@ yamllint .
 
 ## Deploy Initial Environments
 
-Initialize OpenTofu once from the repository root:
+Install the configuration-reader dependencies and initialize OpenTofu from the
+repository root:
 
 ```bash
+python3 -m pip install --requirement requirements.txt
 tofu init
 ```
 

@@ -77,8 +77,20 @@ variable "grayhaven_test_compute_policy_path" {
   nullable    = true
 }
 
-variable "grayhaven_test_operations_policy_path" {
-  description = "Plaintext operations policy fixture used for offline validation."
+variable "grayhaven_test_server_configuration_path" {
+  description = "Optional server configuration fixture for offline plan tests."
+  type        = string
+  default     = null
+}
+
+variable "grayhaven_test_ansible_configuration_path" {
+  description = "Optional Ansible configuration fixture for offline plan tests."
+  type        = string
+  default     = null
+}
+
+variable "grayhaven_test_observability_configuration_path" {
+  description = "Optional observability configuration fixture for offline plan tests."
   type        = string
   default     = null
 }
@@ -112,7 +124,7 @@ variable "grayhaven_test_vault_config_path" {
 }
 
 variable "grayhaven_vault_checkout_path" {
-  description = "Local checkout path for grayhaven-vault. OpenTofu reads plaintext configuration from the selected Git ref in this checkout."
+  description = "Local checkout path for grayhaven-vault. OpenTofu reads committed configuration and the encrypted control public key from the selected Git ref."
   type        = string
   default     = null
   nullable    = true

@@ -25,7 +25,7 @@ resource "terraform_data" "environment_policy_guard" {
 
     precondition {
       condition     = can(regex("^(ssh-ed25519|ssh-rsa|ecdsa-sha2-[^ ]+) [A-Za-z0-9+/=]+", local.bootstrap_control_public_key))
-      error_message = "compute.yml bootstrap.control_public_key must contain an SSH public key."
+      error_message = "Encrypted Vault data must contain a valid control public key."
     }
 
     precondition {
@@ -110,6 +110,10 @@ data "external" "vault_config" {
     local.vault_checkout_path,
     local.vault_repo_ref,
   ]
+  query = {
+    read_control_key = tostring(local.is_environment)
+    vault_password   = local.is_environment ? local.vault_password : ""
+  }
 }
 
 resource "digitalocean_vpc" "baseline" {

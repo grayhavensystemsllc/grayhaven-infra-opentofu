@@ -41,7 +41,10 @@ jobs:
         run: tofu fmt -check -recursive
 
       - name: Test vault configuration reader
-        run: python3 tests/test_read_vault_config.py
+        run: |
+          python3 -m pip install --requirement requirements-dev.txt
+          python3 -m coverage run tests/test_read_vault_config.py
+          python3 -m coverage report
 
       - name: Initialize OpenTofu
         run: tofu init -backend=false

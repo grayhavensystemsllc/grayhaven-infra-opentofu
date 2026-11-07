@@ -1,6 +1,4 @@
 ---
-bootstrap:
-  control_public_key: "ssh-ed25519 AAAAexample fixture@example.test"
 bastions:
   control_node: bastion-01
   instances:

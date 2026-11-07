@@ -21,7 +21,7 @@ Install verification dependencies:
 
 ```bash
 sudo dnf install ShellCheck npm
-python3 -m pip install actionlint-py
+python3 -m pip install actionlint-py --requirement requirements-dev.txt
 npm config set prefix "$HOME/.local"
 npm install --global markdownlint-cli2
 printf '%s\n' "$PATH" | grep -qE "(^|:)$HOME/\\.local/bin(:|$)" || \
@@ -52,7 +52,8 @@ Validate formatting and syntax from the repository root:
 ```bash
 tofu fmt -check -recursive
 shellcheck scripts/read-vault-config
-python3 tests/test_read_vault_config.py
+python3 -m coverage run tests/test_read_vault_config.py
+python3 -m coverage report
 yamllint .
 markdownlint-cli2 "**/*.md" "!.terraform/**"
 ```

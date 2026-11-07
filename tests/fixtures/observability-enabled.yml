@@ -1,0 +1,5 @@
+---
+observability:
+  grafana_cloud:
+    enabled: true
+    logs_enabled: true

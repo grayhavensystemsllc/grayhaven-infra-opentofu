@@ -72,7 +72,7 @@ Ansible backend configuration converge.
 ## Firewall Policy
 
 Cloud firewalls and host firewalld policy are both derived from the
-environment-specific `firewall.yml` file in
+environment-specific `policy/firewall.yml` file in
 `grayhaven-vault`.
 
 OpenTofu reads this file from the local vault checkout during plan and apply.
@@ -96,7 +96,7 @@ single-web-host environments that explicitly use load-balancer TLS.
 ## Observability Tags
 
 Production droplets can receive Grafana Cloud observability tags from
-`config.yml` in `grayhaven-vault`. When enabled, OpenTofu adds
+`grafana/observability.yml` in `grayhaven-vault`. When enabled, OpenTofu adds
 `alerts-in-grafana-cloud` to production droplets so
 [`grayhaven-config-ansible`](https://github.com/grayhavensystemsllc/grayhaven-config-ansible)
 can configure metrics shipping and managed alert rules. When log shipping is
@@ -130,11 +130,12 @@ removes the handoff file before starting the initial full convergence run.
 Environment workspaces read plaintext configuration from the intended
 `grayhaven-vault` Git ref instead of whichever branch is checked out locally.
 Production uses the `main` ref and staging uses the `staging` ref. The
-environment VPC CIDR comes from `config.yml` `network.vpc_cidr`.
+environment VPC CIDR comes from `server_configuration.yml` `network.vpc_cidr`.
 
-Bootstrap role settings are loaded from the selected Vault branch's
-`operations.yml`. The current control public key comes from
-`compute.yml` at `bootstrap.control_public_key`; bootstrap installs it alongside
-the deployment public key so existing control nodes can manage new hosts.
+Bootstrap server settings and automation schedules are loaded from
+`server_configuration.yml` and `ansible.yml`. The current control public key
+comes from encrypted `vault/bastion.yml` at `ansible_control.public_key`.
+The reader decrypts that file in memory and returns only the public key;
+bootstrap installs it alongside the deployment public key.
 
 [Back to top](#runtime-architecture)
