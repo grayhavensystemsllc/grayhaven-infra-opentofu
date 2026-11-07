@@ -1,0 +1,6 @@
+---
+ansible:
+  runner:
+    schedule: '*-*-* 02:30:00'
+  notifications:
+    environment: staging

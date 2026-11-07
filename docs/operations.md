@@ -445,13 +445,13 @@ safely removed.
 ## Bastion Failover
 
 The active control bastion is selected with `bastions.control_node` in
-`grayhaven-vault`'s environment-specific `compute.yml`. Only that bastion
+`grayhaven-vault`'s environment-specific `policy/compute.yml`. Only that bastion
 receives the `control-node` tag and runs the scheduled Ansible runner and
 poller.
 
 To switch the active control bastion:
 
-1. Ensure the target bastion exists in the vault branch's `compute.yml`.
+1. Ensure the target bastion exists in the vault branch's `policy/compute.yml`.
 2. Change `bastions.control_node` to the target bastion key and commit it.
 3. Select the target workspace and run `tofu plan`.
 4. Confirm the plan only changes the expected DNS/tag relationships.
@@ -483,7 +483,8 @@ switch the active control bastion.
 ## Updating Workspace Environment TLS Mode
 
 To change the currently active TLS mode for a given workspace environment,
-first modify `web.tls_mode` in the vault branch's `compute.yml` and commit it.
+first modify `web.tls_mode` in the vault branch's
+`policy/compute.yml` and commit it.
 Then run the following commands from the infrastructure repository root:
 
 ```bash

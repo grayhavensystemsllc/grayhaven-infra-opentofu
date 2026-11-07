@@ -23,3 +23,7 @@ terraform.tfstate.d/
 
 # Variable files
 *.tfvars
+
+# Python validation
+__pycache__/
+.coverage

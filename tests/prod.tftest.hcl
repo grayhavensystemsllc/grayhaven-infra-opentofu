@@ -1,11 +1,11 @@
 variables {
-  grayhaven_test_operations_policy_path     = "tests/fixtures/operations.yml"
+  grayhaven_test_ansible_configuration_path = "tests/fixtures/ansible.yml"
   grayhaven_test_infrastructure_policy_path = "tests/fixtures/infrastructure.yml"
   grayhaven_test_dns_policy_path            = "tests/fixtures/dns-prod.yml"
   grayhaven_test_compute_policy_path        = "tests/fixtures/compute-1x1-auto.yml"
   state_encryption_passphrase_prod          = "offline-test-prod-state-passphrase"
   do_token                                  = "offline-test-token"
-  grayhaven_vault_checkout_path             = "/tmp/grayhaven-vault-offline-test"
+  grayhaven_vault_checkout_path             = "/tmp/fictional-vault"
   grayhaven_vault_password_prod             = "offline-test-prod-vault-password"
   grayhaven_test_ssh_keys_policy_path       = "tests/fixtures/ssh-keys-admin.yml"
   grayhaven_ansible_deploy_public_key       = "ssh-ed25519 AAAAoffline offline@example"
@@ -97,13 +97,22 @@ mock_provider "external" {
   mock_data "external" {
     defaults = {
       result = {
-        config_yml   = <<-EOT
+        control_public_key       = "ssh-ed25519 AAAAfictionalcontrol control@example.invalid"
+        server_configuration_yml = <<-EOT
+          timezone: Etc/UTC
+          network:
+            vpc_cidr: 172.22.0.0/16
+        EOT
+        observability_yml        = <<-EOT
+          observability:
+            grafana_cloud:
+              enabled: false
+              logs_enabled: false
+        EOT
+        config_yml               = <<-EOT
           certificate:
             environment: production
             email: admin@example.com
-          network:
-            vpc_cidr: 172.22.0.0/16
-          discord_webhook: production
           backup:
             repositories:
               local:
@@ -117,7 +126,7 @@ mock_provider "external" {
               - /var/log
             exclude: []
         EOT
-        firewall_yml = <<-EOT
+        firewall_yml             = <<-EOT
           firewalls:
             bastion:
               inbound:
@@ -350,8 +359,8 @@ run "prod_grafana_cloud_observability_tags" {
   }
 
   variables {
-    grayhaven_test_compute_policy_path = "tests/fixtures/compute-1x1-auto.yml"
-    grayhaven_test_vault_config_path   = "tests/fixtures/vault-config-grafana-enabled.yml"
+    grayhaven_test_compute_policy_path              = "tests/fixtures/compute-1x1-auto.yml"
+    grayhaven_test_observability_configuration_path = "tests/fixtures/observability-enabled.yml"
   }
 
   assert {
@@ -384,8 +393,8 @@ run "prod_grafana_cloud_logs_require_enabled" {
   }
 
   variables {
-    grayhaven_test_compute_policy_path = "tests/fixtures/compute-1x1-auto.yml"
-    grayhaven_test_vault_config_path   = "tests/fixtures/vault-config-grafana-logs-without-enabled.yml"
+    grayhaven_test_compute_policy_path              = "tests/fixtures/compute-1x1-auto.yml"
+    grayhaven_test_observability_configuration_path = "tests/fixtures/observability-logs-without-enabled.yml"
   }
 
   expect_failures = [

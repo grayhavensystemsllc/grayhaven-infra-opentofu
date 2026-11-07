@@ -64,12 +64,22 @@ locals {
   default_region       = local.infrastructure_policy.defaults.region
   default_os_image     = local.infrastructure_policy.defaults.os_image
   default_droplet_size = local.infrastructure_policy.defaults.droplet_size
-  operations_policy = yamldecode(
-    var.grayhaven_test_operations_policy_path != null
-    ? file(var.grayhaven_test_operations_policy_path)
-    : data.external.vault_config[0].result.operations_yml
+  server_configuration = yamldecode(
+    var.grayhaven_test_server_configuration_path != null
+    ? file(var.grayhaven_test_server_configuration_path)
+    : data.external.vault_config[0].result.server_configuration_yml
   )
-  bootstrap_control_public_key = local.is_environment ? try(local.compute_policy.bootstrap.control_public_key, "") : ""
+  ansible_configuration = yamldecode(
+    var.grayhaven_test_ansible_configuration_path != null
+    ? file(var.grayhaven_test_ansible_configuration_path)
+    : data.external.vault_config[0].result.ansible_yml
+  )
+  observability_configuration = local.is_environment ? yamldecode(
+    var.grayhaven_test_observability_configuration_path != null
+    ? file(var.grayhaven_test_observability_configuration_path)
+    : data.external.vault_config[0].result.observability_yml
+  ) : {}
+  bootstrap_control_public_key = local.is_environment ? data.external.vault_config[0].result.control_public_key : ""
   baseline_vpc_cidr            = local.infrastructure_policy.baseline.vpc_cidr
   config_repo_url              = local.infrastructure_policy.repositories.config
   vault_repo_url               = local.infrastructure_policy.repositories.vault
@@ -87,7 +97,7 @@ locals {
   )
   vault_config = yamldecode(local.vault_config_yaml)
 
-  network_config = try(local.vault_config.network, {})
+  network_config = try(local.server_configuration.network, {})
   environment_vpc_cidr = (
     local.is_environment
     ? try(local.network_config.vpc_cidr, null)
@@ -96,7 +106,7 @@ locals {
 
   certificate_config = try(local.vault_config.certificate, {})
 
-  grafana_cloud_config         = try(local.vault_config.observability.grafana_cloud, {})
+  grafana_cloud_config         = try(local.observability_configuration.observability.grafana_cloud, {})
   grafana_cloud_enabled        = local.is_environment ? try(tobool(local.grafana_cloud_config.enabled), false) : false
   grafana_cloud_logs_requested = local.is_environment ? try(tobool(local.grafana_cloud_config.logs_enabled), false) : false
   grafana_cloud_logs_enabled   = local.grafana_cloud_enabled && local.grafana_cloud_logs_requested
@@ -225,53 +235,59 @@ locals {
     }
   }
 
+  bootstrap_shared_configuration = merge(
+    local.server_configuration,
+    local.ansible_configuration,
+    {
+      infrastructure = local.infrastructure_policy
+      certificate    = local.certificate_config
+    },
+  )
+
   bastion_bootstrap_vars = {
-    for key, host in local.bastion_hosts : key => merge(local.operations_policy, { infrastructure = local.infrastructure_policy }, {
-      grayhaven_hostname                                                                          = host.hostname
-      grayhaven_environment                                                                       = local.environment
-      grayhaven_role                                                                              = "bastion"
-      grayhaven_is_control_node                                                                   = host.is_control_node
-      grayhaven_control_bastion_key                                                               = local.control_bastion_key
-      grayhaven_config_repo_url                                                                   = local.config_repo_url
-      grayhaven_config_repo_ref                                                                   = local.config_repo_ref
-      grayhaven_vault_repo_url                                                                    = local.vault_repo_url
-      grayhaven_vault_repo_ref                                                                    = local.vault_repo_ref
-      grayhaven_vault_password                                                                    = local.vault_password
-      grayhaven_ansible_control_public_key                                                        = local.bootstrap_control_public_key
-      grayhaven_ansible_deploy_public_key                                                         = var.grayhaven_ansible_deploy_public_key
-      grayhaven_ansible_deploy_private_key                                                        = var.grayhaven_ansible_deploy_private_key
-      grayhaven_certificate_environment                                                           = local.certificate_environment
-      grayhaven_tls_mode                                                                          = local.effective_tls_mode
+    for key, host in local.bastion_hosts : key => merge(local.bootstrap_shared_configuration, {
+      grayhaven_hostname                   = host.hostname
+      grayhaven_environment                = local.environment
+      grayhaven_role                       = "bastion"
+      grayhaven_is_control_node            = host.is_control_node
+      grayhaven_control_bastion_key        = local.control_bastion_key
+      grayhaven_config_repo_url            = local.config_repo_url
+      grayhaven_config_repo_ref            = local.config_repo_ref
+      grayhaven_vault_repo_url             = local.vault_repo_url
+      grayhaven_vault_repo_ref             = local.vault_repo_ref
+      grayhaven_vault_password             = local.vault_password
+      grayhaven_ansible_control_public_key = local.bootstrap_control_public_key
+      grayhaven_ansible_deploy_public_key  = var.grayhaven_ansible_deploy_public_key
+      grayhaven_ansible_deploy_private_key = var.grayhaven_ansible_deploy_private_key
+      grayhaven_tls_mode                   = local.effective_tls_mode
     })
   }
 
   web_bootstrap_vars = {
-    for key, host in local.web_hosts : key => merge(local.operations_policy, { infrastructure = local.infrastructure_policy }, {
-      grayhaven_hostname                                                                      = host.hostname
-      grayhaven_environment                                                                   = local.environment
-      grayhaven_role                                                                          = "web"
-      grayhaven_config_repo_url                                                               = local.config_repo_url
-      grayhaven_config_repo_ref                                                               = local.config_repo_ref
-      grayhaven_control_bastion_key                                                           = local.control_bastion_key
-      grayhaven_ansible_control_public_key                                                    = local.bootstrap_control_public_key
-      grayhaven_ansible_deploy_public_key                                                     = var.grayhaven_ansible_deploy_public_key
-      grayhaven_certificate_environment                                                       = local.certificate_environment
-      grayhaven_tls_mode                                                                      = local.effective_tls_mode
+    for key, host in local.web_hosts : key => merge(local.bootstrap_shared_configuration, {
+      grayhaven_hostname                   = host.hostname
+      grayhaven_environment                = local.environment
+      grayhaven_role                       = "web"
+      grayhaven_config_repo_url            = local.config_repo_url
+      grayhaven_config_repo_ref            = local.config_repo_ref
+      grayhaven_control_bastion_key        = local.control_bastion_key
+      grayhaven_ansible_control_public_key = local.bootstrap_control_public_key
+      grayhaven_ansible_deploy_public_key  = var.grayhaven_ansible_deploy_public_key
+      grayhaven_tls_mode                   = local.effective_tls_mode
     })
   }
 
   mcp_bootstrap_vars = {
-    for key, host in local.mcp_hosts : key => merge(local.operations_policy, { infrastructure = local.infrastructure_policy }, {
-      grayhaven_hostname                                                                      = host.hostname
-      grayhaven_environment                                                                   = local.environment
-      grayhaven_role                                                                          = "mcp"
-      grayhaven_config_repo_url                                                               = local.config_repo_url
-      grayhaven_config_repo_ref                                                               = local.config_repo_ref
-      grayhaven_control_bastion_key                                                           = local.control_bastion_key
-      grayhaven_ansible_control_public_key                                                    = local.bootstrap_control_public_key
-      grayhaven_ansible_deploy_public_key                                                     = var.grayhaven_ansible_deploy_public_key
-      grayhaven_certificate_environment                                                       = local.certificate_environment
-      grayhaven_tls_mode                                                                      = "host"
+    for key, host in local.mcp_hosts : key => merge(local.bootstrap_shared_configuration, {
+      grayhaven_hostname                   = host.hostname
+      grayhaven_environment                = local.environment
+      grayhaven_role                       = "mcp"
+      grayhaven_config_repo_url            = local.config_repo_url
+      grayhaven_config_repo_ref            = local.config_repo_ref
+      grayhaven_control_bastion_key        = local.control_bastion_key
+      grayhaven_ansible_control_public_key = local.bootstrap_control_public_key
+      grayhaven_ansible_deploy_public_key  = var.grayhaven_ansible_deploy_public_key
+      grayhaven_tls_mode                   = "host"
     })
   }
 

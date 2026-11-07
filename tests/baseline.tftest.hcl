@@ -1,5 +1,6 @@
 variables {
-  grayhaven_test_operations_policy_path     = "tests/fixtures/operations.yml"
+  grayhaven_test_ansible_configuration_path = "tests/fixtures/ansible.yml"
+  grayhaven_test_server_configuration_path  = "tests/fixtures/server-configuration.yml"
   grayhaven_test_infrastructure_policy_path = "tests/fixtures/infrastructure.yml"
   grayhaven_test_dns_policy_path            = "tests/fixtures/dns-baseline-shared-records.yml"
   grayhaven_vault_checkout_path             = "/tmp/example-vault-offline-test"

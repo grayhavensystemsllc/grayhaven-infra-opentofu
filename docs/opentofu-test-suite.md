@@ -43,7 +43,8 @@ test file:
 The test files use mocked providers, fake sensitive values, and
 `refresh = false` plans. The external vault-config lookup is mocked for
 environment tests so the suite does not need access to `grayhaven-vault`
-repository. The mocked vault lookup supplies fictional configuration.
+repository. The mocked vault lookup supplies fictional configuration and a fictional
+control public key.
 Test-only path overrides load independent fixtures; tests do not read live
 vault configuration.
 
@@ -60,6 +61,9 @@ from `tests/fixtures/`:
 - `grayhaven_test_firewall_policy_path`
 - `grayhaven_test_ssh_keys_policy_path`
 - `grayhaven_test_vault_config_path`
+- `grayhaven_test_server_configuration_path`
+- `grayhaven_test_ansible_configuration_path`
+- `grayhaven_test_observability_configuration_path`
 
 These variables exist only for offline plan tests and disposable validation
 checkouts. Leave them unset for operational deployments.
@@ -115,6 +119,11 @@ DNS resources. This keeps shared DNS ownership in `baseline` and runtime DNS
 ownership in the environment workspaces.
 
 [Back to top](#opentofu-test-suite)
+
+The Python configuration-reader unit tests cover committed file selection,
+public-key extraction, password delivery, validation failures and value-free
+diagnostics using invented inputs. Line and branch coverage must remain at
+least 90%.
 
 ## Limitations
 
