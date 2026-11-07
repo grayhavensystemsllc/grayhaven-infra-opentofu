@@ -256,8 +256,8 @@ yamllint .
 
 ## Deploy Initial Environments
 
-Install the configuration-reader dependencies and initialize OpenTofu from the
-repository root:
+Install the configuration-reader dependencies, including `ansible-vault`,
+and initialize OpenTofu from the repository root:
 
 ```bash
 python3 -m pip install --requirement requirements.txt
