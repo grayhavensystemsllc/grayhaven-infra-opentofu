@@ -64,9 +64,15 @@ locals {
   default_region       = local.infrastructure_policy.defaults.region
   default_os_image     = local.infrastructure_policy.defaults.os_image
   default_droplet_size = local.infrastructure_policy.defaults.droplet_size
-  baseline_vpc_cidr    = local.infrastructure_policy.baseline.vpc_cidr
-  config_repo_url      = local.infrastructure_policy.repositories.config
-  vault_repo_url       = local.infrastructure_policy.repositories.vault
+  operations_policy = yamldecode(
+    var.grayhaven_test_operations_policy_path != null
+    ? file(var.grayhaven_test_operations_policy_path)
+    : data.external.vault_config[0].result.operations_yml
+  )
+  bootstrap_control_public_key = local.is_environment ? try(local.compute_policy.bootstrap.control_public_key, "") : ""
+  baseline_vpc_cidr            = local.infrastructure_policy.baseline.vpc_cidr
+  config_repo_url              = local.infrastructure_policy.repositories.config
+  vault_repo_url               = local.infrastructure_policy.repositories.vault
 
   # Environment workspaces read config.yml from the intended vault Git ref, not
   # from whichever branch is checked out in the local vault working tree.
@@ -220,47 +226,53 @@ locals {
   }
 
   bastion_bootstrap_vars = {
-    for key, host in local.bastion_hosts : key => {
-      grayhaven_hostname                   = host.hostname
-      grayhaven_environment                = local.environment
-      grayhaven_role                       = "bastion"
-      grayhaven_is_control_node            = host.is_control_node
-      grayhaven_control_bastion_key        = local.control_bastion_key
-      grayhaven_config_repo_ref            = local.config_repo_ref
-      grayhaven_vault_repo_url             = local.vault_repo_url
-      grayhaven_vault_repo_ref             = local.vault_repo_ref
-      grayhaven_vault_password             = local.vault_password
-      grayhaven_ansible_deploy_public_key  = var.grayhaven_ansible_deploy_public_key
-      grayhaven_ansible_deploy_private_key = var.grayhaven_ansible_deploy_private_key
-      grayhaven_certificate_environment    = local.certificate_environment
-      grayhaven_tls_mode                   = local.effective_tls_mode
-    }
+    for key, host in local.bastion_hosts : key => merge(local.operations_policy, { infrastructure = local.infrastructure_policy }, {
+      grayhaven_hostname                                                                          = host.hostname
+      grayhaven_environment                                                                       = local.environment
+      grayhaven_role                                                                              = "bastion"
+      grayhaven_is_control_node                                                                   = host.is_control_node
+      grayhaven_control_bastion_key                                                               = local.control_bastion_key
+      grayhaven_config_repo_url                                                                   = local.config_repo_url
+      grayhaven_config_repo_ref                                                                   = local.config_repo_ref
+      grayhaven_vault_repo_url                                                                    = local.vault_repo_url
+      grayhaven_vault_repo_ref                                                                    = local.vault_repo_ref
+      grayhaven_vault_password                                                                    = local.vault_password
+      grayhaven_ansible_control_public_key                                                        = local.bootstrap_control_public_key
+      grayhaven_ansible_deploy_public_key                                                         = var.grayhaven_ansible_deploy_public_key
+      grayhaven_ansible_deploy_private_key                                                        = var.grayhaven_ansible_deploy_private_key
+      grayhaven_certificate_environment                                                           = local.certificate_environment
+      grayhaven_tls_mode                                                                          = local.effective_tls_mode
+    })
   }
 
   web_bootstrap_vars = {
-    for key, host in local.web_hosts : key => {
-      grayhaven_hostname                  = host.hostname
-      grayhaven_environment               = local.environment
-      grayhaven_role                      = "web"
-      grayhaven_config_repo_ref           = local.config_repo_ref
-      grayhaven_control_bastion_key       = local.control_bastion_key
-      grayhaven_ansible_deploy_public_key = var.grayhaven_ansible_deploy_public_key
-      grayhaven_certificate_environment   = local.certificate_environment
-      grayhaven_tls_mode                  = local.effective_tls_mode
-    }
+    for key, host in local.web_hosts : key => merge(local.operations_policy, { infrastructure = local.infrastructure_policy }, {
+      grayhaven_hostname                                                                      = host.hostname
+      grayhaven_environment                                                                   = local.environment
+      grayhaven_role                                                                          = "web"
+      grayhaven_config_repo_url                                                               = local.config_repo_url
+      grayhaven_config_repo_ref                                                               = local.config_repo_ref
+      grayhaven_control_bastion_key                                                           = local.control_bastion_key
+      grayhaven_ansible_control_public_key                                                    = local.bootstrap_control_public_key
+      grayhaven_ansible_deploy_public_key                                                     = var.grayhaven_ansible_deploy_public_key
+      grayhaven_certificate_environment                                                       = local.certificate_environment
+      grayhaven_tls_mode                                                                      = local.effective_tls_mode
+    })
   }
 
   mcp_bootstrap_vars = {
-    for key, host in local.mcp_hosts : key => {
-      grayhaven_hostname                  = host.hostname
-      grayhaven_environment               = local.environment
-      grayhaven_role                      = "mcp"
-      grayhaven_config_repo_ref           = local.config_repo_ref
-      grayhaven_control_bastion_key       = local.control_bastion_key
-      grayhaven_ansible_deploy_public_key = var.grayhaven_ansible_deploy_public_key
-      grayhaven_certificate_environment   = local.certificate_environment
-      grayhaven_tls_mode                  = "host"
-    }
+    for key, host in local.mcp_hosts : key => merge(local.operations_policy, { infrastructure = local.infrastructure_policy }, {
+      grayhaven_hostname                                                                      = host.hostname
+      grayhaven_environment                                                                   = local.environment
+      grayhaven_role                                                                          = "mcp"
+      grayhaven_config_repo_url                                                               = local.config_repo_url
+      grayhaven_config_repo_ref                                                               = local.config_repo_ref
+      grayhaven_control_bastion_key                                                           = local.control_bastion_key
+      grayhaven_ansible_control_public_key                                                    = local.bootstrap_control_public_key
+      grayhaven_ansible_deploy_public_key                                                     = var.grayhaven_ansible_deploy_public_key
+      grayhaven_certificate_environment                                                       = local.certificate_environment
+      grayhaven_tls_mode                                                                      = "host"
+    })
   }
 
   bastion_user_data = {

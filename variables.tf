@@ -77,6 +77,12 @@ variable "grayhaven_test_compute_policy_path" {
   nullable    = true
 }
 
+variable "grayhaven_test_operations_policy_path" {
+  description = "Plaintext operations policy fixture used for offline validation."
+  type        = string
+  default     = null
+}
+
 variable "grayhaven_test_dns_policy_path" {
   description = "Optional DNS policy file path override for offline plan tests. Leave unset for operational deployments."
   type        = string

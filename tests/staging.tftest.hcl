@@ -1,4 +1,5 @@
 variables {
+  grayhaven_test_operations_policy_path     = "tests/fixtures/operations.yml"
   grayhaven_test_infrastructure_policy_path = "tests/fixtures/infrastructure.yml"
   grayhaven_test_dns_policy_path            = "tests/fixtures/dns-staging.yml"
   state_encryption_passphrase_staging       = "offline-test-staging-state-passphrase"
