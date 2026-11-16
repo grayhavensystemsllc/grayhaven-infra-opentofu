@@ -202,6 +202,13 @@ run "staging_mcp_host_plan" {
   }
 
   assert {
+    condition = alltrue([for content in concat(
+      values(local.bastion_user_data), values(local.web_user_data), values(local.mcp_user_data)
+    ) : issensitive(content)])
+    error_message = "Bootstrap notification configuration must remain sensitive in every host handoff."
+  }
+
+  assert {
     condition     = length(digitalocean_vpc.managed) == 0 && length(digitalocean_vpc_peering.managed) == 0
     error_message = "Environment workspaces must reuse permanent networks."
   }
