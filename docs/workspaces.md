@@ -30,12 +30,10 @@ depend on, including:
 - DNS zones;
 - mail DNS records;
 - CAA records;
-- the default baseline VPC.
+- permanent regional VPCs and configured peerings.
 
-The default baseline VPC follows `<client>-core-baseline-vpc` and is not
-used. Resources should not be assigned to this VPC. It exists because
-DigitalOcean does not allow default VPCs to be destroyed and to act as a safety
-net in case a resource is created on accident without explicit VPC assignment.
+Baseline VPCs are regional defaults and are not intended for workloads.
+Environment deployments select a permanent VPC for their environment and region.
 
 Protected baseline resources cannot be destroyed through normal OpenTofu
 operations. To be absolutely safe, you should not attempt to destroy the
@@ -52,7 +50,6 @@ validate changes before promotion to production.
 
 Staging owns environment-specific resources such as:
 
-- the staging VPC;
 - staging bastion and web droplets;
 - staging firewall attachments;
 - staging web DNS records;
@@ -63,8 +60,7 @@ Staging reads plaintext configuration from the `staging` Git ref in the local
 `grayhaven-vault` checkout. The checkout can use another branch, but the
 `staging` ref must be present locally.
 
-The `staging` workspace is expected to be destroyed after validation unless an
-active test requires it to remain online.
+Destroying the `staging` workspace leaves its permanent VPC and peerings intact.
 
 [Back to top](#workspaces)
 
@@ -74,7 +70,6 @@ The `prod` workspace manages production runtime infrastructure.
 
 Production owns environment-specific resources such as:
 
-- the production VPC;
 - production bastion and web droplets;
 - production firewall attachments;
 - production web DNS records;

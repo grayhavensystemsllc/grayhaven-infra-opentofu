@@ -130,7 +130,8 @@ removes the handoff file before starting the initial full convergence run.
 Environment workspaces read plaintext configuration from the intended
 `grayhaven-vault` Git ref instead of whichever branch is checked out locally.
 Production uses the `main` ref and staging uses the `staging` ref. The
-environment VPC CIDR comes from `server_configuration.yml` `network.vpc_cidr`.
+environment VPC is selected from `policy/infrastructure.yml` `network.vpcs`
+using its environment and the configured region.
 
 Bootstrap server settings and automation schedules are loaded from
 `server_configuration.yml` and `ansible.yml`. The current control public key

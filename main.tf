@@ -44,8 +44,8 @@ resource "terraform_data" "environment_policy_guard" {
     }
 
     precondition {
-      condition     = local.is_environment ? local.environment_vpc_cidr != null && can(cidrnetmask(local.environment_vpc_cidr)) : true
-      error_message = "network.vpc_cidr must be a valid CIDR block for staging and prod workspaces."
+      condition     = local.is_environment ? length(local.environment_vpc_keys) == 1 && can(cidrnetmask(local.environment_vpc_cidr)) : true
+      error_message = "The network policy must define one VPC for the selected environment and region."
     }
 
     precondition {
@@ -116,36 +116,13 @@ data "external" "vault_config" {
   }
 }
 
-resource "digitalocean_vpc" "baseline" {
-  count = local.is_baseline ? 1 : 0
-
-  name        = "${local.client_name}-core-baseline-vpc"
-  region      = local.default_region
-  ip_range    = local.baseline_vpc_cidr
-  description = "Baseline default VPC for ${local.organization}"
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
-module "vpc" {
-  count  = local.is_environment ? 1 : 0
-  source = "./modules/vpc"
-
-  name        = "${local.client_name}-core-${local.environment}-vpc"
-  region      = local.default_region
-  vpc_cidr    = local.environment_vpc_cidr
-  description = "${title(local.environment)} VPC for ${local.organization}"
-}
-
 module "bastion" {
   for_each = local.bastion_hosts
   source   = "./modules/droplet"
 
   name                 = each.value.hostname
   region               = local.default_region
-  vpc_id               = module.vpc[0].id
+  vpc_id               = data.digitalocean_vpc.environment[0].id
   ssh_key_fingerprints = local.admin_ssh_key_fingerprints
   size                 = each.value.size
   image                = each.value.image
@@ -159,7 +136,7 @@ module "web" {
 
   name                 = each.value.hostname
   region               = local.default_region
-  vpc_id               = module.vpc[0].id
+  vpc_id               = data.digitalocean_vpc.environment[0].id
   ssh_key_fingerprints = local.admin_ssh_key_fingerprints
   size                 = each.value.size
   image                = each.value.image
@@ -173,7 +150,7 @@ module "mcp" {
 
   name                 = each.value.hostname
   region               = local.default_region
-  vpc_id               = module.vpc[0].id
+  vpc_id               = data.digitalocean_vpc.environment[0].id
   ssh_key_fingerprints = local.admin_ssh_key_fingerprints
   size                 = each.value.size
   image                = each.value.image

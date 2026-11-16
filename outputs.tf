@@ -58,7 +58,7 @@ output "workspace" {
 
 output "environment_vpc_cidr" {
   description = "CIDR range of the active environment VPC"
-  value       = local.is_environment ? module.vpc[0].vpc_cidr : null
+  value       = local.is_environment ? local.environment_vpc_cidr : null
 }
 
 output "admin_ssh_key_fingerprints" {
@@ -81,4 +81,14 @@ output "mcp_tags" {
 output "mcp_firewall_inbound_rules" {
   description = "Effective inbound firewall rules for MCP hosts"
   value       = try(module.mcp_firewall[0].inbound_rules, [])
+}
+
+output "vpcs" {
+  description = "Permanent VPC identifiers by network policy key"
+  value       = { for key, network in digitalocean_vpc.managed : key => network.id }
+}
+
+output "vpc_peerings" {
+  description = "Permanent peering identifiers by network policy key"
+  value       = { for key, peering in digitalocean_vpc_peering.managed : key => peering.id }
 }

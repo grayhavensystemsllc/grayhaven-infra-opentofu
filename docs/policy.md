@@ -21,13 +21,13 @@ committed files from that ref, regardless of the checked-out branch.
 
 | File | Configuration |
 | --- | --- |
-| `policy/infrastructure.yml` | Identity, project, defaults, repositories, VPC |
+| `policy/infrastructure.yml` | Identity, defaults, repositories, networks |
 | `policy/compute.yml` | Environment server instances and web TLS mode |
 | `policy/dns.yml` | Environment DNS records |
 | `policy/baseline/dns.yml` | Shared DNS zones and records |
 | `policy/baseline/ssh-keys.yml` | First-boot admin public keys |
 | `config.yml` | Certificate settings |
-| `server_configuration.yml` | Server settings and environment network |
+| `server_configuration.yml` | Server settings |
 | `ansible.yml` | Automation schedules and notifications |
 | `grafana/observability.yml` | Grafana Cloud selectors |
 | `vault/bastion.yml` | Encrypted Ansible control public key |
@@ -38,7 +38,7 @@ committed files from that ref, regardless of the checked-out branch.
 ## Infrastructure Configuration
 
 `policy/infrastructure.yml` supplies resource identity, DigitalOcean project settings,
-provider defaults, baseline VPC CIDR and bootstrap repository URLs.
+provider defaults, regional VPCs, peerings and bootstrap repository URLs.
 
 [Back to top](#policy-files)
 
