@@ -90,6 +90,7 @@ scope for this automation.
 | ssh_key       | create, read, update, delete        |
 | tag           | create, read, delete                |
 | vpc           | create, read, update, delete        |
+| vpc_peering   | create, read, update, delete        |
 
 [Back to top](#setup)
 

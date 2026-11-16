@@ -97,19 +97,21 @@ mock_provider "external" {
   mock_data "external" {
     defaults = {
       result = {
-        control_public_key       = "ssh-ed25519 AAAAfictionalcontrol control@example.invalid"
-        server_configuration_yml = <<-EOT
+        bootstrap_discord_webhook = "https://discord.com/api/webhooks/fixture/fixture"
+        control_public_key        = "ssh-ed25519 AAAAfictionalcontrol control@example.invalid"
+        server_configuration_yml  = <<-EOT
+          os_release: "12.4"
           timezone: Etc/UTC
           network:
             vpc_cidr: 172.22.0.0/16
         EOT
-        observability_yml        = <<-EOT
+        observability_yml         = <<-EOT
           observability:
             grafana_cloud:
               enabled: false
               logs_enabled: false
         EOT
-        config_yml               = <<-EOT
+        config_yml                = <<-EOT
           certificate:
             environment: production
             email: admin@example.com
@@ -126,7 +128,7 @@ mock_provider "external" {
               - /var/log
             exclude: []
         EOT
-        firewall_yml             = <<-EOT
+        firewall_yml              = <<-EOT
           firewalls:
             bastion:
               inbound:

@@ -4,3 +4,5 @@ ansible:
     schedule: '*-*-* 02:30:00'
   notifications:
     environment: staging
+    colors:
+      error: 123

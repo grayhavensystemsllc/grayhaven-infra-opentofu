@@ -59,6 +59,7 @@ class RefTests(unittest.TestCase):
                 self.assertEqual(result, {
                     **{key: ref + ":" + name + "\n" for key, name in paths.items()},
                     "control_public_key": "",
+                    "bootstrap_discord_webhook": "",
                 })
 
     def test_git_failures_never_return_command_output(self):
@@ -79,24 +80,37 @@ class RefTests(unittest.TestCase):
 
     def test_public_only_requests_do_not_decrypt(self):
         with patch.object(reader, "read_ref_file", return_value="fictional content"), \
-             patch.object(reader, "public_key_from_encrypted") as decrypt:
+             patch.object(reader, "configuration_from_encrypted") as decrypt:
             result = reader.read_configuration(Path("/fictional/repository"), "fake-ref", {}, {"entry": "alpha.yml"})
         decrypt.assert_not_called()
-        self.assertEqual(result, {"entry": "fictional content", "control_public_key": ""})
+        self.assertEqual(result, {"entry": "fictional content", "control_public_key": "", "bootstrap_discord_webhook": ""})
 
-    def test_selected_public_key_is_added_without_other_secret_fields(self):
+    def test_selected_bootstrap_fields_exclude_unrelated_secret_fields(self):
         supplied = {"read_control_key": "true", "vault_password": "fictional-opaque-value"}
-        def read(checkout, ref, name):
-            self.assertEqual(checkout, Path("/fictional/repository"))
-            self.assertEqual(ref, "chosen-ref")
-            return CIPHER if name == "vault/bastion.yml" else "fictional policy"
-        with patch.object(reader, "read_ref_file", side_effect=read), \
-             patch.object(reader, "public_key_from_encrypted", return_value=PUBLIC) as decrypt:
-            result = reader.read_configuration(Path("/fictional/repository"), "chosen-ref", supplied, {"policy": "alpha.yml"})
-        decrypt.assert_called_once_with(CIPHER, supplied["vault_password"])
-        self.assertEqual(result, {"policy": "fictional policy", "control_public_key": PUBLIC})
+        webhook = "https://discord.com/api/webhooks/fixture/fixture"
+        values = {
+            "ansible_control": {"public_key": PUBLIC, "private_key": "omitted"},
+            "discord_webhooks": {"chosen": webhook},
+        }
+        automation = json.dumps({"ansible": {"notifications": {"environment": "chosen"}}})
+        with patch.object(reader, "read_ref_file", side_effect=[automation, CIPHER]), \
+             patch.object(reader, "configuration_from_encrypted", return_value=values) as decrypt:
+            result = reader.read_configuration(Path("/fictional/repository"), "chosen-ref", supplied, {"ansible_yml": "ansible.yml"})
+        self.assertTrue(decrypt.call_args.args == (CIPHER, supplied["vault_password"]))
+        self.assertEqual(result["control_public_key"], PUBLIC)
+        self.assertTrue(result["bootstrap_discord_webhook"] == webhook)
         self.assertNotIn("vault_password", result)
         self.assertNotIn("private_key", result)
+
+    def test_notification_selection_rejects_missing_or_invalid_configuration(self):
+        automation = json.dumps({"ansible": {"notifications": {"environment": "chosen"}}})
+        for values, text in [({}, automation), ({"discord_webhooks": []}, automation),
+                             ({"discord_webhooks": {"chosen": 4}}, automation),
+                             ({"discord_webhooks": {"chosen": "http://example.invalid"}}, automation),
+                             ({}, "["), ({}, "null")]:
+            with self.subTest():
+                with self.assertRaises(reader.ReaderError):
+                    reader.notification_from_configuration(values, text)
 
 
 class EncryptedKeyTests(unittest.TestCase):
