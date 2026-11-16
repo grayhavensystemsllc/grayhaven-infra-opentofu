@@ -80,7 +80,6 @@ locals {
     : data.external.vault_config[0].result.observability_yml
   ) : {}
   bootstrap_control_public_key = local.is_environment ? data.external.vault_config[0].result.control_public_key : ""
-  baseline_vpc_cidr            = local.infrastructure_policy.baseline.vpc_cidr
   config_repo_url              = local.infrastructure_policy.repositories.config
   vault_repo_url               = local.infrastructure_policy.repositories.vault
 
@@ -97,12 +96,13 @@ locals {
   )
   vault_config = yamldecode(local.vault_config_yaml)
 
-  network_config = try(local.server_configuration.network, {})
-  environment_vpc_cidr = (
-    local.is_environment
-    ? try(local.network_config.vpc_cidr, null)
-    : null
-  )
+  vpc_networks = local.infrastructure_policy.network.vpcs
+  environment_vpc_keys = [
+    for key, network in local.vpc_networks : key
+    if network.environment == local.environment && network.region == local.default_region
+  ]
+  environment_vpc_key  = try(local.environment_vpc_keys[0], null)
+  environment_vpc_cidr = local.is_environment ? try(local.vpc_networks[local.environment_vpc_key].cidr, null) : null
 
   certificate_config = try(local.vault_config.certificate, {})
 

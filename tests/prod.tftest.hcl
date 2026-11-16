@@ -85,7 +85,7 @@ mock_provider "digitalocean" {
     }
   }
 
-  mock_resource "digitalocean_vpc" {
+  mock_data "digitalocean_vpc" {
     defaults = {
       id  = "vpc-id"
       urn = "do:vpc:vpc-id"
@@ -226,6 +226,11 @@ run "prod_config_ref_override_requires_explicit_approval" {
   providers = {
     digitalocean = digitalocean
     external     = external
+  }
+
+  assert {
+    condition     = length(digitalocean_vpc.managed) == 0 && length(digitalocean_vpc_peering.managed) == 0
+    error_message = "Environment workspaces must reuse permanent networks."
   }
 
   variables {

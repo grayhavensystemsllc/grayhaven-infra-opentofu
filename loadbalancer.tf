@@ -50,7 +50,7 @@ resource "digitalocean_loadbalancer" "web" {
 
   name                   = "${local.client_name}-core-${local.environment}-web-lb"
   region                 = local.default_region
-  vpc_uuid               = module.vpc[0].id
+  vpc_uuid               = data.digitalocean_vpc.environment[0].id
   droplet_ids            = [for droplet in module.web : droplet.id]
   redirect_http_to_https = true
 

@@ -30,8 +30,8 @@ Current project segments are:
 
 Examples:
 
-- `example-core-baseline-vpc`
-- `example-core-prod-vpc`
+- `<client>-core-baseline-vpc-<region>`
+- `<client>-core-prod-vpc-<region>`
 - `example-core-prod-web-01`
 - `example-sec-prod-bastion-01`
 - `example-core-prod-web-fw`

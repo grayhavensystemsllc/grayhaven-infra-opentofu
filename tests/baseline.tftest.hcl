@@ -35,8 +35,7 @@ mock_provider "digitalocean" {
 
   mock_resource "digitalocean_vpc" {
     defaults = {
-      id  = "vpc-id"
-      urn = "do:vpc:vpc-id"
+      urn = "do:vpc:fixture"
     }
   }
 }
@@ -132,8 +131,20 @@ run "baseline_fixture_plan" {
   }
 
   assert {
-    condition     = digitalocean_vpc.baseline[0].name == "example-core-baseline-vpc"
-    error_message = "The baseline plan must include the protected baseline VPC."
+    condition = (length(digitalocean_vpc.managed) == length(local.vpc_networks) &&
+      alltrue([for key, network in digitalocean_vpc.managed :
+        network.region == local.vpc_networks[key].region &&
+        network.ip_range == local.vpc_networks[key].cidr &&
+        network.name == "${local.client_name}-core-${local.vpc_networks[key].environment}-vpc-${local.vpc_networks[key].region}"
+    ]))
+    error_message = "Baseline must own the configured regional networks."
+  }
+
+  assert {
+    condition = alltrue([for key, peering in digitalocean_vpc_peering.managed :
+      toset(peering.vpc_ids) == toset([for network_key in local.infrastructure_policy.network.peerings[key] : digitalocean_vpc.managed[network_key].id])
+    ])
+    error_message = "Peerings must connect their configured network endpoints."
   }
 
   assert {
