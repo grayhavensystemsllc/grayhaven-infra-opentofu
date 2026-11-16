@@ -241,7 +241,7 @@ locals {
     environment   = local.environment
     repository    = local.config_repo_url
     ref           = local.config_repo_ref
-    webhook       = data.external.vault_config[0].result.bootstrap_discord_webhook
+    webhook       = sensitive(data.external.vault_config[0].result.bootstrap_discord_webhook)
     failure_color = local.ansible_configuration.ansible.notifications.colors.error
   } : null
 
