@@ -235,6 +235,16 @@ locals {
     }
   }
 
+  bootstrap_configuration = local.is_environment ? {
+    os_release    = local.server_configuration.os_release
+    timezone      = local.server_configuration.timezone
+    environment   = local.environment
+    repository    = local.config_repo_url
+    ref           = local.config_repo_ref
+    webhook       = data.external.vault_config[0].result.bootstrap_discord_webhook
+    failure_color = local.ansible_configuration.ansible.notifications.colors.error
+  } : null
+
   bootstrap_shared_configuration = merge(
     local.server_configuration,
     local.ansible_configuration,
@@ -293,25 +303,25 @@ locals {
 
   bastion_user_data = {
     for key, bootstrap_vars in local.bastion_bootstrap_vars : key => templatefile("${path.module}/templates/cloud-init/bootstrap-vars.yml.tftpl", {
-      bootstrap_vars_yaml = yamlencode(bootstrap_vars)
-      config_repo_ref     = local.config_repo_ref
-      config_repo_url     = local.config_repo_url
+      bootstrap_vars_yaml   = yamlencode(bootstrap_vars)
+      bootstrap_config_json = jsonencode(merge(local.bootstrap_configuration, { hostname = bootstrap_vars.grayhaven_hostname }))
+      bootstrap_script      = file("${path.module}/scripts/bootstrap_host.py")
     })
   }
 
   web_user_data = {
     for key, bootstrap_vars in local.web_bootstrap_vars : key => templatefile("${path.module}/templates/cloud-init/bootstrap-vars.yml.tftpl", {
-      bootstrap_vars_yaml = yamlencode(bootstrap_vars)
-      config_repo_ref     = local.config_repo_ref
-      config_repo_url     = local.config_repo_url
+      bootstrap_vars_yaml   = yamlencode(bootstrap_vars)
+      bootstrap_config_json = jsonencode(merge(local.bootstrap_configuration, { hostname = bootstrap_vars.grayhaven_hostname }))
+      bootstrap_script      = file("${path.module}/scripts/bootstrap_host.py")
     })
   }
 
   mcp_user_data = {
     for key, bootstrap_vars in local.mcp_bootstrap_vars : key => templatefile("${path.module}/templates/cloud-init/bootstrap-vars.yml.tftpl", {
-      bootstrap_vars_yaml = yamlencode(bootstrap_vars)
-      config_repo_ref     = local.config_repo_ref
-      config_repo_url     = local.config_repo_url
+      bootstrap_vars_yaml   = yamlencode(bootstrap_vars)
+      bootstrap_config_json = jsonencode(merge(local.bootstrap_configuration, { hostname = bootstrap_vars.grayhaven_hostname }))
+      bootstrap_script      = file("${path.module}/scripts/bootstrap_host.py")
     })
   }
 

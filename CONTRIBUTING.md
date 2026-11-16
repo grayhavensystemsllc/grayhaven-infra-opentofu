@@ -52,7 +52,7 @@ Validate formatting and syntax from the repository root:
 ```bash
 tofu fmt -check -recursive
 shellcheck scripts/read-vault-config
-python3 -m coverage run tests/test_read_vault_config.py
+python3 -m coverage run -m unittest discover -s tests
 python3 -m coverage report
 yamllint .
 markdownlint-cli2 "**/*.md" "!.terraform/**"

@@ -79,8 +79,8 @@ multiple web hosts. `load_balancer` selects load-balancer TLS when web hosts
 exist. MCP uses host TLS.
 
 Bootstrap obtains `ansible_control.public_key` from encrypted
-`vault/bastion.yml` using the environment's Vault password. Only the public
-key is returned to OpenTofu; it is installed alongside the bootstrap deployment
-public key.
+`vault/bastion.yml` using the environment's Vault password. The reader returns
+the public key and selected bootstrap notification webhook. Other encrypted
+fields remain private.
 
 [Back to top](#policy-files)

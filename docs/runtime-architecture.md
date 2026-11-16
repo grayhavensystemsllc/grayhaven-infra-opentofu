@@ -136,7 +136,9 @@ using its environment and the configured region.
 Bootstrap server settings and automation schedules are loaded from
 `server_configuration.yml` and `ansible.yml`. The current control public key
 comes from encrypted `vault/bastion.yml` at `ansible_control.public_key`.
-The reader decrypts that file in memory and returns only the public key;
-bootstrap installs it alongside the deployment public key.
+The reader decrypts that file in memory and returns the public key and selected
+notification webhook. Bootstrap rejects base images newer than `os_release`
+before installing packages and pins DNF to the approved release. Bootstrap
+failures use the standard failure notification.
 
 [Back to top](#runtime-architecture)

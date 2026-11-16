@@ -77,9 +77,9 @@ def password_descriptor(password: str):
         os.close(descriptor)
 
 
-def public_key_from_encrypted(ciphertext: str, password: str) -> str:
+def configuration_from_encrypted(ciphertext: str, password: str) -> dict:
     if not ciphertext.startswith("$ANSIBLE_VAULT;"):
-        raise ReaderError("The bootstrap key source must be encrypted.")
+        raise ReaderError("The bootstrap source must be encrypted.")
     try:
         with tempfile.TemporaryDirectory(prefix="vault-reader-") as directory:
             cipher_path = Path(directory) / "bastion.enc"
@@ -88,30 +88,54 @@ def public_key_from_encrypted(ciphertext: str, password: str) -> str:
                 destination.write(ciphertext)
             with password_descriptor(password) as secret_fd:
                 result = subprocess.run(
-                    [
-                        "ansible-vault", "view", "--vault-password-file",
-                        f"/proc/self/fd/{secret_fd}", str(cipher_path),
-                    ],
+                    ["ansible-vault", "view", "--vault-password-file",
+                     f"/proc/self/fd/{secret_fd}", str(cipher_path)],
                     pass_fds=(secret_fd,), capture_output=True, text=True,
                     timeout=30, check=False,
                 )
             if result.returncode:
-                raise ReaderError("Unable to decrypt the bootstrap public-key source.")
+                raise ReaderError("Unable to decrypt the bootstrap source.")
             values = yaml.safe_load(result.stdout)
-            public_key = values["ansible_control"]["public_key"]
-            if not isinstance(public_key, str):
-                raise ReaderError("The control public key must be a string.")
-            public_key = public_key.strip()
-            if not re.fullmatch(
-                r"(ssh-ed25519|ssh-rsa|ecdsa-sha2-[A-Za-z0-9-]+) [A-Za-z0-9+/=]+(?: [^\r\n]+)?",
-                public_key,
-            ):
-                raise ReaderError("The control public key is invalid.")
-            return public_key
+            if not isinstance(values, dict):
+                raise ReaderError("Invalid bootstrap configuration.")
+            return values
     except ReaderError:
         raise
-    except (OSError, ValueError, TypeError, KeyError, yaml.YAMLError, subprocess.SubprocessError):
+    except (OSError, ValueError, TypeError, yaml.YAMLError, subprocess.SubprocessError):
+        raise ReaderError("Unable to read bootstrap configuration.") from None
+
+
+def public_key_from_configuration(values: dict) -> str:
+    try:
+        public_key = values["ansible_control"]["public_key"]
+        if not isinstance(public_key, str):
+            raise ReaderError("The control public key must be a string.")
+        public_key = public_key.strip()
+        if not re.fullmatch(
+            r"(ssh-ed25519|ssh-rsa|ecdsa-sha2-[A-Za-z0-9-]+) [A-Za-z0-9+/=]+(?: [^\r\n]+)?",
+            public_key,
+        ):
+            raise ReaderError("The control public key is invalid.")
+        return public_key
+    except (KeyError, TypeError):
         raise ReaderError("Unable to read the bootstrap public key.") from None
+
+
+def public_key_from_encrypted(ciphertext: str, password: str) -> str:
+    return public_key_from_configuration(configuration_from_encrypted(ciphertext, password))
+
+
+def notification_from_configuration(values: dict, automation_text: str) -> str:
+    try:
+        selector = yaml.safe_load(automation_text)["ansible"]["notifications"]["environment"]
+        webhook = values["discord_webhooks"][selector]
+        if not isinstance(webhook, str) or not re.fullmatch(
+            r"https://(?:discord.com|discordapp.com)/api/webhooks/[^\s\"\r\n]+", webhook,
+        ):
+            raise ReaderError("Invalid bootstrap notification configuration.")
+        return webhook
+    except (KeyError, TypeError, yaml.YAMLError):
+        raise ReaderError("Unable to read bootstrap notification configuration.") from None
 
 
 def read_configuration(checkout: Path, ref: str, request: dict, paths=None) -> dict[str, str]:
@@ -120,9 +144,12 @@ def read_configuration(checkout: Path, ref: str, request: dict, paths=None) -> d
         for key, name in (FILES if paths is None else paths).items()
     }
     result["control_public_key"] = ""
+    result["bootstrap_discord_webhook"] = ""
     if request.get("read_control_key") == "true":
         encrypted = read_ref_file(checkout, ref, "vault/bastion.yml")
-        result["control_public_key"] = public_key_from_encrypted(encrypted, request["vault_password"])
+        values = configuration_from_encrypted(encrypted, request["vault_password"])
+        result["control_public_key"] = public_key_from_configuration(values)
+        result["bootstrap_discord_webhook"] = notification_from_configuration(values, result["ansible_yml"])
     return result
 
 

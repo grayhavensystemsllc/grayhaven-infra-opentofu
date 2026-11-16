@@ -43,7 +43,7 @@ jobs:
       - name: Test vault configuration reader
         run: |
           python3 -m pip install --requirement requirements-dev.txt
-          python3 -m coverage run tests/test_read_vault_config.py
+          python3 -m coverage run -m unittest discover -s tests
           python3 -m coverage report
 
       - name: Initialize OpenTofu
