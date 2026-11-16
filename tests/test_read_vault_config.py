@@ -59,6 +59,7 @@ class RefTests(unittest.TestCase):
                 self.assertEqual(result, {
                     **{key: ref + ":" + name + "\n" for key, name in paths.items()},
                     "control_public_key": "",
+                    "bootstrap_discord_webhook": "",
                 })
 
     def test_git_failures_never_return_command_output(self):
