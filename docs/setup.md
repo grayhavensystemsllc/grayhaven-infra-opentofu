@@ -216,7 +216,9 @@ done
 Configure the files in `grayhaven-vault` using the
 [file schemas](https://github.com/grayhavensystemsllc/grayhaven-vault-example/blob/main/docs/schema.md).
 Use separate `staging` and `main` branch commits for environment configuration.
-Baseline reads the shared files from `main`. Environment plans also read
+Baseline reads shared files and production peerings from `main` and staging
+peerings from `staging`. Keep both refs current in the local vault checkout.
+Environment plans also read
 `ansible_control.public_key` from encrypted `vault/bastion.yml` with the
 existing environment Vault password.
 

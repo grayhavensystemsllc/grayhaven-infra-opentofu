@@ -16,8 +16,9 @@ Git ref. File schemas and examples are documented in
 ## Overview
 
 Set `TF_VAR_grayhaven_vault_checkout_path` to the local vault checkout.
-Baseline and production read `main`; staging reads `staging`. OpenTofu reads
-committed files from that ref, regardless of the checked-out branch.
+Baseline reads shared policy and production peerings from `main`, and staging
+peerings from `staging`. Environment workspaces read their own ref. OpenTofu
+reads committed files regardless of the checked-out branch.
 
 | File | Configuration |
 | --- | --- |
@@ -39,6 +40,8 @@ committed files from that ref, regardless of the checked-out branch.
 
 `policy/infrastructure.yml` supplies resource identity, DigitalOcean project settings,
 provider defaults, regional VPCs, peerings and bootstrap repository URLs.
+Baseline owns permanent VPCs and the peerings defined on both environment
+branches. Define each peering on its environment's branch.
 
 [Back to top](#policy-files)
 

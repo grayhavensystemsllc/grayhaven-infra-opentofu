@@ -97,6 +97,12 @@ locals {
   vault_config = yamldecode(local.vault_config_yaml)
 
   vpc_networks = local.infrastructure_policy.network.vpcs
+  vpc_peerings_by_environment = {
+    prod    = local.is_baseline ? local.infrastructure_policy.network.peerings : {}
+    staging = local.is_baseline ? yamldecode(data.external.vault_config[0].result.peering_policy_yml).network.peerings : {}
+  }
+  vpc_peerings = merge(local.vpc_peerings_by_environment.prod, local.vpc_peerings_by_environment.staging)
+
   environment_vpc_keys = [
     for key, network in local.vpc_networks : key
     if network.environment == local.environment && network.region == local.default_region

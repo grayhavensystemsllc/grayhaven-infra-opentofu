@@ -43,6 +43,8 @@ def read_request(text: str) -> dict:
         raise ReaderError("Configuration-reader request must be an object.")
     if request.get("read_control_key", "false") not in ("true", "false"):
         raise ReaderError("Invalid public-key selection.")
+    if not isinstance(request.get("peering_policy_ref", ""), str):
+        raise ReaderError("Invalid peering policy ref.")
     if request.get("read_control_key") == "true":
         password = request.get("vault_password")
         if not isinstance(password, str) or not password or len(password) > 16384:
@@ -143,6 +145,11 @@ def read_configuration(checkout: Path, ref: str, request: dict, paths=None) -> d
         key: read_ref_file(checkout, ref, name)
         for key, name in (FILES if paths is None else paths).items()
     }
+    peering_policy_ref = request.get("peering_policy_ref")
+    if peering_policy_ref:
+        result["peering_policy_yml"] = read_ref_file(
+            checkout, peering_policy_ref, FILES["infrastructure_yml"],
+        )
     result["control_public_key"] = ""
     result["bootstrap_discord_webhook"] = ""
     if request.get("read_control_key") == "true":

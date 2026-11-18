@@ -34,10 +34,14 @@ network:
       environment: staging
       region: nyc2
       cidr: 172.23.0.0/16
+    secondary_prod:
+      environment: prod
+      region: nyc2
+      cidr: 172.24.0.0/16
   peerings:
-    application:
-      - primary_staging
-      - secondary_staging
+    application_prod:
+      - primary_prod
+      - secondary_prod
 
 repositories:
   config: https://github.com/example-org/configuration.git
