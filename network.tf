@@ -1,5 +1,8 @@
 resource "terraform_data" "network_policy_guard" {
-  input = local.infrastructure_policy.network
+  input = {
+    vpcs     = local.vpc_networks
+    peerings = local.vpc_peerings
+  }
 
   lifecycle {
     precondition {
@@ -12,12 +15,20 @@ resource "terraform_data" "network_policy_guard" {
     }
 
     precondition {
-      condition = alltrue([
-        for peering in values(local.infrastructure_policy.network.peerings) :
-        length(distinct(peering)) == 2 &&
-        alltrue([for key in peering : contains(keys(local.vpc_networks), key)])
-      ])
-      error_message = "Each peering must identify two distinct configured VPCs."
+      condition     = length(local.vpc_peerings) == sum([for peerings in values(local.vpc_peerings_by_environment) : length(peerings)])
+      error_message = "Peering names must be unique across environment branches."
+    }
+
+    precondition {
+      condition = alltrue(flatten([
+        for environment, peerings in local.vpc_peerings_by_environment : [
+          for peering in values(peerings) :
+          length(peering) == 2 &&
+          alltrue([for key in peering : try(local.vpc_networks[key].environment == environment, false)]) &&
+          length(distinct([for key in peering : try(local.vpc_networks[key].region, "")])) == 2
+        ]
+      ]))
+      error_message = "Each peering must identify two configured VPCs in different regions of its own environment."
     }
   }
 }
@@ -36,7 +47,7 @@ resource "digitalocean_vpc" "managed" {
 }
 
 resource "digitalocean_vpc_peering" "managed" {
-  for_each = local.is_baseline ? local.infrastructure_policy.network.peerings : {}
+  for_each = local.vpc_peerings
 
   name    = "${local.client_name}-core-${each.key}-peering"
   vpc_ids = [for key in each.value : digitalocean_vpc.managed[key].id]

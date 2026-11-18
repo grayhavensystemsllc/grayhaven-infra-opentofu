@@ -39,6 +39,8 @@ class RequestTests(unittest.TestCase):
             with self.subTest():
                 with self.assertRaises(reader.ReaderError):
                     reader.read_request(json.dumps({"read_control_key": mode}))
+        with self.assertRaises(reader.ReaderError):
+            reader.read_request(json.dumps({"peering_policy_ref": 4}))
         for value in [None, "", 8, [], {}, "x" * 16385]:
             with self.subTest():
                 with self.assertRaises(reader.ReaderError):
@@ -61,6 +63,18 @@ class RefTests(unittest.TestCase):
                     "control_public_key": "",
                     "bootstrap_discord_webhook": "",
                 })
+
+    def test_peering_policy_uses_the_additional_ref_without_decrypting(self):
+        checkout = Path("/fictional/repository")
+        request = reader.read_request(json.dumps({"peering_policy_ref": "alternate-ref"}))
+        with patch.object(reader, "read_ref_file", side_effect=["base data", "peering data"]) as read, \
+             patch.object(reader, "configuration_from_encrypted") as decrypt:
+            result = reader.read_configuration(checkout, "base-ref", request, {"base": "policy/base.yml"})
+        self.assertEqual(read.call_args_list[0].args, (checkout, "base-ref", "policy/base.yml"))
+        self.assertEqual(read.call_args_list[1].args, (checkout, "alternate-ref", reader.FILES["infrastructure_yml"]))
+        self.assertEqual(result["base"], "base data")
+        self.assertEqual(result["peering_policy_yml"], "peering data")
+        decrypt.assert_not_called()
 
     def test_git_failures_never_return_command_output(self):
         diagnostic = "fictional-sensitive-diagnostic"

@@ -111,8 +111,9 @@ data "external" "vault_config" {
     local.vault_repo_ref,
   ]
   query = {
-    read_control_key = tostring(local.is_environment)
-    vault_password   = local.is_environment ? local.vault_password : ""
+    read_control_key   = tostring(local.is_environment)
+    peering_policy_ref = local.is_baseline ? "staging" : ""
+    vault_password     = local.is_environment ? local.vault_password : ""
   }
 }
 

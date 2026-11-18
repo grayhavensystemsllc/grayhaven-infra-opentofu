@@ -9,7 +9,15 @@ variables {
 mock_provider "external" {
   mock_data "external" {
     defaults = {
-      result = {}
+      result = {
+        peering_policy_yml = <<-YAML
+          network:
+            peerings:
+              application_stage:
+                - primary_staging
+                - secondary_staging
+        YAML
+      }
     }
   }
 }
@@ -141,10 +149,13 @@ run "baseline_fixture_plan" {
   }
 
   assert {
-    condition = alltrue([for key, peering in digitalocean_vpc_peering.managed :
-      toset(peering.vpc_ids) == toset([for network_key in local.infrastructure_policy.network.peerings[key] : digitalocean_vpc.managed[network_key].id])
-    ])
-    error_message = "Peerings must connect their configured network endpoints."
+    condition = (
+      toset(keys(digitalocean_vpc_peering.managed)) == toset(["application_prod", "application_stage"]) &&
+      alltrue([for key, peering in digitalocean_vpc_peering.managed :
+        toset(peering.vpc_ids) == toset([for network_key in local.vpc_peerings[key] : digitalocean_vpc.managed[network_key].id])
+      ])
+    )
+    error_message = "Baseline must plan peerings for both branch policies using their configured VPCs."
   }
 
   assert {
