@@ -21,7 +21,7 @@ Install verification dependencies:
 
 ```bash
 sudo dnf install ShellCheck npm
-python3 -m pip install actionlint-py --requirement requirements-dev.txt
+python3 -m pip install --requirement requirements-dev.txt
 npm config set prefix "$HOME/.local"
 npm install --global markdownlint-cli2
 printf '%s\n' "$PATH" | grep -qE "(^|:)$HOME/\\.local/bin(:|$)" || \
